@@ -933,20 +933,34 @@ function WebGLTextures( _gl, extensions, state, properties, capabilities, utils,
 
 				const range = updateRanges[ i ];
 
-				const pixelStart = Math.floor( range.start / componentStride );
-				const pixelCount = Math.ceil( range.count / componentStride );
+				// upload every pixel the range touches; a range spanning rows is split into the rest
+				// of its first row, the whole rows in between and the start of its last row
+				let pixelStart = Math.floor( range.start / componentStride );
+				const pixelEnd = Math.min( Math.ceil( ( range.start + range.count ) / componentStride ), image.width * image.height );
 
-				const x = pixelStart % image.width;
-				const y = Math.floor( pixelStart / image.width );
+				while ( pixelStart < pixelEnd ) {
 
-				// Assumes update ranges refer to contiguous memory
-				const width = pixelCount;
-				const height = 1;
+					const x = pixelStart % image.width;
+					const y = Math.floor( pixelStart / image.width );
 
-				state.pixelStorei( _gl.UNPACK_SKIP_PIXELS, x );
-				state.pixelStorei( _gl.UNPACK_SKIP_ROWS, y );
+					let width = Math.min( image.width - x, pixelEnd - pixelStart );
+					let height = 1;
 
-				state.texSubImage2D( _gl.TEXTURE_2D, 0, x, y, width, height, glFormat, glType, image.data );
+					if ( x === 0 && pixelEnd - pixelStart >= image.width ) {
+
+						width = image.width;
+						height = Math.floor( ( pixelEnd - pixelStart ) / image.width );
+
+					}
+
+					state.pixelStorei( _gl.UNPACK_SKIP_PIXELS, x );
+					state.pixelStorei( _gl.UNPACK_SKIP_ROWS, y );
+
+					state.texSubImage2D( _gl.TEXTURE_2D, 0, x, y, width, height, glFormat, glType, image.data );
+
+					pixelStart += width * height;
+
+				}
 
 			}
 

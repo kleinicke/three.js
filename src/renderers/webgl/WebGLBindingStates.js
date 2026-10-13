@@ -47,6 +47,16 @@ function WebGLBindingStates( gl, attributes ) {
 
 		}
 
+		// The instance limit belongs to the attributes bound right now: a geometry
+		// drawn with several programs, or whose instanced attributes were replaced,
+		// must not keep the limit of an earlier binding.
+
+		if ( object.isInstancedMesh !== true && geometry.isInstancedBufferGeometry === true ) {
+
+			geometry._maxInstanceCount = currentState.maxInstanceCount;
+
+		}
+
 	}
 
 	function createVertexArrayObject() {
@@ -140,7 +150,8 @@ function WebGLBindingStates( gl, attributes ) {
 			attributeDivisors: attributeDivisors,
 			object: vao,
 			attributes: {},
-			index: null
+			index: null,
+			maxInstanceCount: Infinity
 
 		};
 
@@ -322,6 +333,8 @@ function WebGLBindingStates( gl, attributes ) {
 
 		const materialDefaultAttributeValues = material.defaultAttributeValues;
 
+		let maxInstanceCount = Infinity;
+
 		for ( const name in programAttributes ) {
 
 			const programAttribute = programAttributes[ name ];
@@ -370,11 +383,7 @@ function WebGLBindingStates( gl, attributes ) {
 
 							}
 
-							if ( object.isInstancedMesh !== true && geometry._maxInstanceCount === undefined ) {
-
-								geometry._maxInstanceCount = data.meshPerAttribute * data.count;
-
-							}
+							maxInstanceCount = Math.min( maxInstanceCount, data.meshPerAttribute * data.count );
 
 						} else {
 
@@ -412,11 +421,7 @@ function WebGLBindingStates( gl, attributes ) {
 
 							}
 
-							if ( object.isInstancedMesh !== true && geometry._maxInstanceCount === undefined ) {
-
-								geometry._maxInstanceCount = geometryAttribute.meshPerAttribute * geometryAttribute.count;
-
-							}
+							maxInstanceCount = Math.min( maxInstanceCount, geometryAttribute.meshPerAttribute * geometryAttribute.count );
 
 						} else {
 
@@ -480,6 +485,8 @@ function WebGLBindingStates( gl, attributes ) {
 		}
 
 		disableUnusedAttributes();
+
+		currentState.maxInstanceCount = maxInstanceCount;
 
 	}
 

@@ -1007,58 +1007,63 @@ class BufferGeometry extends EventDispatcher {
 
 		if ( positionAttribute !== undefined ) {
 
+			const count = positionAttribute.count;
+
 			let normalAttribute = this.getAttribute( 'normal' );
 
-			if ( normalAttribute === undefined || normalAttribute.count !== positionAttribute.count ) {
+			if ( normalAttribute === undefined || normalAttribute.count !== count ) {
 
-				normalAttribute = new BufferAttribute( new Float32Array( positionAttribute.count * 3 ), 3 );
+				normalAttribute = new BufferAttribute( new Float32Array( count * 3 ), 3 );
 				this.setAttribute( 'normal', normalAttribute );
-
-			} else {
-
-				// reset existing normals to zero
-
-				for ( let i = 0, il = normalAttribute.count; i < il; i ++ ) {
-
-					normalAttribute.setXYZ( i, 0, 0, 0 );
-
-				}
 
 			}
 
+			// unnormalized face normals are summed, which needs full float range: quantized or
+			// half-float attributes are accumulated in a scratch array and written at the end
+
+			const direct = normalAttribute.isInterleavedBufferAttribute !== true &&
+				normalAttribute.itemSize === 3 &&
+				normalAttribute.normalized === false &&
+				normalAttribute.array.constructor === Float32Array;
+
+			const normals = direct ? normalAttribute.array : new Float32Array( count * 3 );
+
+			if ( direct ) normals.fill( 0 );
+
 			const pA = new Vector3(), pB = new Vector3(), pC = new Vector3();
-			const nA = new Vector3(), nB = new Vector3(), nC = new Vector3();
 			const cb = new Vector3(), ab = new Vector3();
 
 			// indexed elements
 
 			if ( index ) {
 
-				for ( let i = 0, il = index.count; i < il; i += 3 ) {
+				for ( let i = 0, il = index.count - 2; i < il; i += 3 ) {
 
-					const vA = index.getX( i + 0 );
-					const vB = index.getX( i + 1 );
-					const vC = index.getX( i + 2 );
+					const a = index.getX( i + 0 );
+					const b = index.getX( i + 1 );
+					const c = index.getX( i + 2 );
 
-					pA.fromBufferAttribute( positionAttribute, vA );
-					pB.fromBufferAttribute( positionAttribute, vB );
-					pC.fromBufferAttribute( positionAttribute, vC );
+					pA.fromBufferAttribute( positionAttribute, a );
+					pB.fromBufferAttribute( positionAttribute, b );
+					pC.fromBufferAttribute( positionAttribute, c );
 
 					cb.subVectors( pC, pB );
 					ab.subVectors( pA, pB );
 					cb.cross( ab );
 
-					nA.fromBufferAttribute( normalAttribute, vA );
-					nB.fromBufferAttribute( normalAttribute, vB );
-					nC.fromBufferAttribute( normalAttribute, vC );
+					const vA = a * 3, vB = b * 3, vC = c * 3;
 
-					nA.add( cb );
-					nB.add( cb );
-					nC.add( cb );
+					normals[ vA ] += cb.x;
+					normals[ vA + 1 ] += cb.y;
+					normals[ vA + 2 ] += cb.z;
 
-					normalAttribute.setXYZ( vA, nA.x, nA.y, nA.z );
-					normalAttribute.setXYZ( vB, nB.x, nB.y, nB.z );
-					normalAttribute.setXYZ( vC, nC.x, nC.y, nC.z );
+					normals[ vB ] += cb.x;
+					normals[ vB + 1 ] += cb.y;
+					normals[ vB + 2 ] += cb.z;
+
+					normals[ vC ] += cb.x;
+					normals[ vC + 1 ] += cb.y;
+					normals[ vC + 2 ] += cb.z;
 
 				}
 
@@ -1066,7 +1071,7 @@ class BufferGeometry extends EventDispatcher {
 
 				// non-indexed elements (unconnected triangle soup)
 
-				for ( let i = 0, il = positionAttribute.count; i < il; i += 3 ) {
+				for ( let i = 0, il = count - 2; i < il; i += 3 ) {
 
 					pA.fromBufferAttribute( positionAttribute, i + 0 );
 					pB.fromBufferAttribute( positionAttribute, i + 1 );
@@ -1076,15 +1081,38 @@ class BufferGeometry extends EventDispatcher {
 					ab.subVectors( pA, pB );
 					cb.cross( ab );
 
-					normalAttribute.setXYZ( i + 0, cb.x, cb.y, cb.z );
-					normalAttribute.setXYZ( i + 1, cb.x, cb.y, cb.z );
-					normalAttribute.setXYZ( i + 2, cb.x, cb.y, cb.z );
+					for ( let j = i * 3, jl = j + 9; j < jl; j += 3 ) {
+
+						normals[ j ] = cb.x;
+						normals[ j + 1 ] = cb.y;
+						normals[ j + 2 ] = cb.z;
+
+					}
 
 				}
 
 			}
 
-			this.normalizeNormals();
+			// normalize, then store
+
+			for ( let i = 0, j = 0; i < count; i ++, j += 3 ) {
+
+				const x = normals[ j ], y = normals[ j + 1 ], z = normals[ j + 2 ];
+				const scale = 1 / ( Math.sqrt( x * x + y * y + z * z ) || 1 );
+
+				if ( direct ) {
+
+					normals[ j ] = x * scale;
+					normals[ j + 1 ] = y * scale;
+					normals[ j + 2 ] = z * scale;
+
+				} else {
+
+					normalAttribute.setXYZ( i, x * scale, y * scale, z * scale );
+
+				}
+
+			}
 
 			normalAttribute.needsUpdate = true;
 

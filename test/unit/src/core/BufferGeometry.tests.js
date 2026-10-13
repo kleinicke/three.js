@@ -527,6 +527,73 @@ export default QUnit.module( 'Core', () => {
 
 		} );
 
+		QUnit.test( 'computeVertexNormals (quantized normal attribute)', ( assert ) => {
+
+			// a pyramid whose faces are much larger than 1: the summed, unnormalized
+			// face normals must not be clamped by the attribute's [-1, 1] range
+			const position = new BufferAttribute( new Float32Array( [
+				0, 0, 0, 10, 0, 0, 10, 10, 0, 0, 10, 0, 5, 5, 2.5
+			] ), 3 );
+			const index = [ 0, 1, 4, 1, 2, 4, 2, 3, 4, 3, 0, 4 ];
+
+			const reference = new BufferGeometry();
+			reference.setAttribute( 'position', position );
+			reference.setIndex( index );
+			reference.computeVertexNormals();
+			const expected = reference.getAttribute( 'normal' );
+
+			for ( const [ name, array, tolerance ] of [
+				[ 'Int8', new Int8Array( 15 ), 0.01 ],
+				[ 'Int16', new Int16Array( 15 ), 0.0001 ]
+			] ) {
+
+				const geometry = new BufferGeometry();
+				geometry.setAttribute( 'position', position );
+				geometry.setIndex( index );
+				geometry.setAttribute( 'normal', new BufferAttribute( array, 3, true ) );
+				geometry.computeVertexNormals();
+
+				const normal = geometry.getAttribute( 'normal' );
+				let maxError = 0;
+
+				for ( let i = 0; i < normal.count; i ++ ) {
+
+					maxError = Math.max( maxError,
+						Math.abs( normal.getX( i ) - expected.getX( i ) ),
+						Math.abs( normal.getY( i ) - expected.getY( i ) ),
+						Math.abs( normal.getZ( i ) - expected.getZ( i ) ) );
+
+				}
+
+				assert.ok( normal.array === array, `${ name }: existing attribute is reused` );
+				assert.ok( maxError < tolerance, `${ name }: normals match the float result (max error ${ maxError })` );
+
+			}
+
+			// half floats overflow above 65504; face areas of a scene in millimetres reach that easily
+			const large = new BufferAttribute( position.array.map( v => v * 1000 ), 3 );
+			const geometry = new BufferGeometry();
+			geometry.setAttribute( 'position', large );
+			geometry.setIndex( index );
+			geometry.setAttribute( 'normal', new Float16BufferAttribute( new Uint16Array( 15 ), 3 ) );
+			geometry.computeVertexNormals();
+
+			const normal = geometry.getAttribute( 'normal' );
+			let maxError = 0;
+
+			for ( let i = 0; i < normal.count; i ++ ) {
+
+				maxError = Math.max( maxError,
+					Math.abs( normal.getX( i ) - expected.getX( i ) ),
+					Math.abs( normal.getY( i ) - expected.getY( i ) ),
+					Math.abs( normal.getZ( i ) - expected.getZ( i ) ) );
+
+			}
+
+			assert.ok( maxError < 0.001, `Float16: normals of a large mesh are finite and correct (max error ${ maxError })` );
+
+		} );
+
 		QUnit.test( 'toNonIndexed', ( assert ) => {
 
 			const geometry = new BufferGeometry();

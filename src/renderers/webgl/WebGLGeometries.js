@@ -96,12 +96,14 @@ function WebGLGeometries( gl, attributes, info, bindingStates ) {
 
 		}
 
-		const count = geometryIndex !== null ? geometryIndex.array.length : ( geometryPosition.array.length / 3 ) - 1;
+		// only whole triangles; position.count (not array.length) also holds for interleaved positions
+		const count = geometryIndex !== null ? geometryIndex.array.length : geometryPosition.count;
+		const triangles = Math.floor( count / 3 );
 
 		// check whether a 32 bit or 16 bit buffer is required to store the indices
 		// account for PRIMITIVE_RESTART_FIXED_INDEX, #24565
 		const IndexBufferAttribute = geometryPosition.count >= 65535 ? Uint32BufferAttribute : Uint16BufferAttribute;
-		const attribute = new IndexBufferAttribute( Math.ceil( count / 3 ) * 6, 1 );
+		const attribute = new IndexBufferAttribute( triangles * 6, 1 );
 		const indices = attribute.array;
 
 		if ( geometryIndex !== null ) {
@@ -109,7 +111,7 @@ function WebGLGeometries( gl, attributes, info, bindingStates ) {
 			const array = geometryIndex.array;
 			version = geometryIndex.version;
 
-			for ( let i = 0, j = 0; i < count; i += 3 ) {
+			for ( let i = 0, j = 0, il = triangles * 3; i < il; i += 3 ) {
 
 				const a = array[ i + 0 ];
 				const b = array[ i + 1 ];
@@ -125,7 +127,7 @@ function WebGLGeometries( gl, attributes, info, bindingStates ) {
 
 			version = geometryPosition.version;
 
-			for ( let i = 0, j = 0; i < count; i += 3 ) {
+			for ( let i = 0, j = 0, il = triangles * 3; i < il; i += 3 ) {
 
 				const a = i + 0;
 				const b = i + 1;

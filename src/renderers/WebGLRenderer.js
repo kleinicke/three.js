@@ -2851,7 +2851,11 @@ class WebGLRenderer {
 
 				}
 
-				materials.refreshMaterialUniforms( m_uniforms, material, _pixelRatio, _height, currentRenderState.state.transmissionRenderTarget[ camera.id ] );
+				// screen-space sizes follow the current target (its height is in physical pixels)
+
+				const targetHeight = ( _currentRenderTarget === null || _currentRenderTarget.isXRRenderTarget === true ) ? _height : _currentRenderTarget.height / _pixelRatio;
+
+				materials.refreshMaterialUniforms( m_uniforms, material, _pixelRatio, targetHeight, currentRenderState.state.transmissionRenderTarget[ camera.id ] );
 
 				// light probe volume
 

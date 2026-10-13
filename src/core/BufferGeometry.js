@@ -629,6 +629,11 @@ class BufferGeometry extends EventDispatcher {
 
 			positionAttribute.needsUpdate = true;
 
+			// bounds computed for the old points would make culling and raycasting use stale values
+
+			if ( this.boundingBox !== null ) this.computeBoundingBox();
+			if ( this.boundingSphere !== null ) this.computeBoundingSphere();
+
 		}
 
 		return this;

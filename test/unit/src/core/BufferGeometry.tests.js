@@ -344,6 +344,23 @@ export default QUnit.module( 'Core', () => {
 
 		} );
 
+		QUnit.test( 'setFromPoints (in place, refreshes computed bounds)', ( assert ) => {
+
+			const geometry = new BufferGeometry().setFromPoints( [ new Vector3( - 30, 0, 0 ), new Vector3( - 29, 0, 0 ) ] );
+			assert.ok( geometry.boundingBox === null && geometry.boundingSphere === null, 'no bounds computed yet' );
+
+			geometry.setFromPoints( [ new Vector3( - 31, 0, 0 ), new Vector3( - 29, 0, 0 ) ] );
+			assert.ok( geometry.boundingBox === null && geometry.boundingSphere === null, 'bounds not computed eagerly' );
+
+			geometry.computeBoundingBox();
+			geometry.computeBoundingSphere();
+			geometry.setFromPoints( [ new Vector3( - 1, 0, 0 ), new Vector3( 1, 0, 0 ) ] );
+
+			assert.ok( geometry.boundingBox.min.equals( new Vector3( - 1, 0, 0 ) ) && geometry.boundingBox.max.equals( new Vector3( 1, 0, 0 ) ), 'box follows the new points' );
+			assert.ok( geometry.boundingSphere.center.equals( new Vector3() ) && geometry.boundingSphere.radius === 1, 'sphere follows the new points' );
+
+		} );
+
 		QUnit.test( 'computeBoundingBox', ( assert ) => {
 
 			let bb = getBBForVertices( [ - 1, - 2, - 3, 13, - 2, - 3.5, - 1, - 20, 0, - 4, 5, 6 ] );

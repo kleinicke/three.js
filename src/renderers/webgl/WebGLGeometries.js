@@ -5,6 +5,12 @@ function WebGLGeometries( gl, attributes, info, bindingStates ) {
 	const geometries = {};
 	const wireframeAttributes = new WeakMap();
 
+	// the buffers each geometry was last drawn with, and how many geometries use each
+	// buffer, so that disposing a geometry keeps the buffers other geometries still use
+
+	const geometryBuffers = new WeakMap();
+	const bufferUsers = new WeakMap();
+
 	const registry = new FinalizationRegistry( ( id ) => delete geometries[ id ] );
 
 	function onGeometryDispose( event ) {
@@ -15,15 +21,17 @@ function WebGLGeometries( gl, attributes, info, bindingStates ) {
 
 	function destroyGeometry( geometry ) {
 
-		if ( geometry.index !== null ) {
+		const buffers = geometryBuffers.get( geometry );
 
-			attributes.remove( geometry.index );
+		if ( buffers !== undefined ) {
 
-		}
+			for ( const buffer of new Set( buffers ) ) {
 
-		for ( const name in geometry.attributes ) {
+				if ( releaseBuffer( buffer ) === true ) attributes.remove( buffer );
 
-			attributes.remove( geometry.attributes[ name ] );
+			}
+
+			geometryBuffers.delete( geometry );
 
 		}
 
@@ -81,6 +89,90 @@ function WebGLGeometries( gl, attributes, info, bindingStates ) {
 			attributes.update( geometryAttributes[ name ], gl.ARRAY_BUFFER );
 
 		}
+
+		trackBuffers( geometry );
+
+	}
+
+	function getBuffer( attribute ) {
+
+		return attribute.isInterleavedBufferAttribute === true ? attribute.data : attribute;
+
+	}
+
+	function trackBuffers( geometry ) {
+
+		const geometryAttributes = geometry.attributes;
+		const geometryIndex = geometry.index;
+		const previous = geometryBuffers.get( geometry );
+
+		// fast path: the geometry uses the same buffers as last time
+
+		if ( previous !== undefined ) {
+
+			let i = 0;
+			let changed = false;
+
+			for ( const name in geometryAttributes ) {
+
+				if ( previous[ i ++ ] !== getBuffer( geometryAttributes[ name ] ) ) {
+
+					changed = true;
+					break;
+
+				}
+
+			}
+
+			if ( changed === false && geometryIndex !== null && previous[ i ++ ] !== geometryIndex ) changed = true;
+
+			if ( changed === false && i === previous.length ) return;
+
+		}
+
+		const current = [];
+
+		for ( const name in geometryAttributes ) current.push( getBuffer( geometryAttributes[ name ] ) );
+
+		if ( geometryIndex !== null ) current.push( geometryIndex );
+
+		geometryBuffers.set( geometry, current );
+
+		const currentSet = new Set( current );
+		const previousSet = new Set( previous );
+
+		for ( const buffer of currentSet ) {
+
+			if ( previousSet.has( buffer ) === false ) bufferUsers.set( buffer, ( bufferUsers.get( buffer ) || 0 ) + 1 );
+
+		}
+
+		// a buffer the geometry no longer uses is left to garbage collection, as before,
+		// since it may be set again (e.g. when alternating between two attributes)
+
+		for ( const buffer of previousSet ) {
+
+			if ( currentSet.has( buffer ) === false ) releaseBuffer( buffer );
+
+		}
+
+	}
+
+	// returns true when no geometry uses the buffer anymore
+
+	function releaseBuffer( buffer ) {
+
+		const users = ( bufferUsers.get( buffer ) || 0 ) - 1;
+
+		if ( users > 0 ) {
+
+			bufferUsers.set( buffer, users );
+			return false;
+
+		}
+
+		bufferUsers.delete( buffer );
+		return true;
 
 	}
 

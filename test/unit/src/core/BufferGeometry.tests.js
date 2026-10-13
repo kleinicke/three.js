@@ -371,6 +371,11 @@ export default QUnit.module( 'Core', () => {
 			assert.ok( bs.radius === radius, 'radius is equal to directionLength' );
 			assert.ok( bs.center.x === 0 && bs.center.y === 0 && bs.center.y === 0, 'bounding sphere is at ( 0, 0, 0 )' );
 
+			bs = getBSForVertices( [ - 10, 0, 0, NaN, NaN, NaN, 10, 0, 0, 0, NaN, 0 ] );
+
+			assert.ok( bs.radius === 10, 'NaN vertices are skipped' );
+			assert.ok( bs.center.x === 0 && bs.center.y === 0 && bs.center.z === 0, 'bounding sphere ignores NaN vertices' );
+
 		} );
 
 		const toHalfFloatArray = ( f32Array ) => {
@@ -424,6 +429,11 @@ export default QUnit.module( 'Core', () => {
 
 			assert.ok( bs.radius === radius, 'radius is equal to directionLength' );
 			assert.ok( bs.center.x === 0 && bs.center.y === 0 && bs.center.y === 0, 'bounding sphere is at ( 0, 0, 0 )' );
+
+			bs = getBSForVertices( [ - 10, 0, 0, NaN, NaN, NaN, 10, 0, 0, 0, NaN, 0 ] );
+
+			assert.ok( bs.radius === 10, 'NaN vertices are skipped' );
+			assert.ok( bs.center.x === 0 && bs.center.y === 0 && bs.center.z === 0, 'bounding sphere ignores NaN vertices' );
 
 		} );
 

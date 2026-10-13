@@ -98,6 +98,13 @@ export default QUnit.module( 'Objects', () => {
 			assert.strictEqual( raycaster.intersectObject( scaled ).length, 1, 'own scale' );
 			assert.strictEqual( raycaster.intersectObject( child ).length, 1, 'parent scale' );
 
+			// a NaN vertex does not hide the others
+
+			positions[ 3 ] = NaN;
+			geometry.computeBoundingSphere();
+
+			assert.strictEqual( raycaster.intersectObject( scaled ).length, 1, 'NaN vertex' );
+
 		} );
 
 	} );

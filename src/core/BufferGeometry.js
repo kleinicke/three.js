@@ -783,7 +783,11 @@ class BufferGeometry extends EventDispatcher {
 
 				_vector.fromBufferAttribute( position, i );
 
-				maxRadiusSq = Math.max( maxRadiusSq, center.distanceToSquared( _vector ) );
+				const distanceSq = center.distanceToSquared( _vector );
+
+				// a comparison instead of Math.max() skips NaN vertices, like the bounding box does
+
+				if ( distanceSq > maxRadiusSq ) maxRadiusSq = distanceSq;
 
 			}
 
@@ -807,7 +811,9 @@ class BufferGeometry extends EventDispatcher {
 
 						}
 
-						maxRadiusSq = Math.max( maxRadiusSq, center.distanceToSquared( _vector ) );
+						const distanceSq = center.distanceToSquared( _vector );
+
+						if ( distanceSq > maxRadiusSq ) maxRadiusSq = distanceSq;
 
 					}
 

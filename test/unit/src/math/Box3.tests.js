@@ -102,6 +102,14 @@ export default QUnit.module( 'Maths', () => {
 			assert.ok( a.min.equals( newMin ), 'Smaller box: correct new minimum' );
 			assert.ok( a.max.equals( newMax ), 'Smaller box: correct new maximum' );
 
+			const withNaN = new BufferAttribute( new Float32Array( [
+				- 1, 0, 0, NaN, NaN, NaN, 3, 2, 1, NaN, 5, 5
+			] ), 3 );
+
+			a.setFromBufferAttribute( withNaN );
+			assert.ok( a.min.equals( new Vector3( - 1, 0, 0 ) ), 'NaN vertices: correct minimum' );
+			assert.ok( a.max.equals( new Vector3( 3, 2, 1 ) ), 'NaN vertices: correct maximum' );
+
 		} );
 
 		QUnit.test( 'setFromPoints', ( assert ) => {

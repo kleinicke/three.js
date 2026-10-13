@@ -89,7 +89,14 @@ class Box3 {
 
 		for ( let i = 0, il = attribute.count; i < il; i ++ ) {
 
-			this.expandByPoint( _vector.fromBufferAttribute( attribute, i ) );
+			_vector.fromBufferAttribute( attribute, i );
+
+			// A vertex with a NaN component cannot be enclosed, and expanding by it would turn the
+			// whole box into NaN. Point clouds use NaN for missing samples, so skip such vertices.
+
+			if ( isNaN( _vector.x ) || isNaN( _vector.y ) || isNaN( _vector.z ) ) continue;
+
+			this.expandByPoint( _vector );
 
 		}
 

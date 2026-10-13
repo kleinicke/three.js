@@ -9,6 +9,29 @@ function WebGLEnvironments( renderer ) {
 
 	let pmremGenerator = null;
 
+	// textures with a 'dispose' listener, so dispose() can remove them
+
+	let textures = {};
+	const registry = new FinalizationRegistry( ( id ) => delete textures[ id ] );
+
+	function track( texture ) {
+
+		if ( textures[ texture.id ] !== undefined ) return;
+
+		textures[ texture.id ] = new WeakRef( texture );
+		registry.register( texture, texture.id, texture );
+
+	}
+
+	function untrack( texture ) {
+
+		if ( cubeMaps.has( texture ) || pmremMaps.has( texture ) ) return;
+
+		delete textures[ texture.id ];
+		registry.unregister( texture );
+
+	}
+
 	function get( texture, usePMREM = false ) {
 
 		if ( texture === null || texture === undefined ) return null;
@@ -47,6 +70,7 @@ function WebGLEnvironments( renderer ) {
 						cubeMaps.set( texture, renderTarget );
 
 						texture.addEventListener( 'dispose', onCubemapDispose );
+						track( texture );
 
 						return mapTextureMapping( renderTarget.texture, texture.mapping );
 
@@ -116,6 +140,7 @@ function WebGLEnvironments( renderer ) {
 							pmremMaps.set( texture, renderTarget );
 
 							texture.addEventListener( 'dispose', onPMREMDispose );
+							track( texture );
 
 							return renderTarget.texture;
 
@@ -185,6 +210,8 @@ function WebGLEnvironments( renderer ) {
 
 		}
 
+		untrack( texture );
+
 	}
 
 	function onPMREMDispose( event ) {
@@ -202,9 +229,27 @@ function WebGLEnvironments( renderer ) {
 
 		}
 
+		untrack( texture );
+
 	}
 
 	function dispose() {
+
+		for ( const id in textures ) {
+
+			const texture = textures[ id ].deref();
+
+			if ( texture !== undefined ) {
+
+				texture.removeEventListener( 'dispose', onCubemapDispose );
+				texture.removeEventListener( 'dispose', onPMREMDispose );
+				registry.unregister( texture );
+
+			}
+
+		}
+
+		textures = {};
 
 		cubeMaps = new WeakMap();
 		pmremMaps = new WeakMap();

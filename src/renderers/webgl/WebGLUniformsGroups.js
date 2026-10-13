@@ -5,6 +5,9 @@ function WebGLUniformsGroups( gl, info, capabilities, state ) {
 	let buffers = {};
 	let updateList = {};
 
+	let uniformsGroups = {};
+	const registry = new FinalizationRegistry( ( id ) => delete uniformsGroups[ id ] );
+
 	function bind( uniformsGroup, program ) {
 
 		const webglProgram = program.program;
@@ -24,6 +27,9 @@ function WebGLUniformsGroups( gl, info, capabilities, state ) {
 			buffers[ uniformsGroup.id ] = buffer;
 
 			uniformsGroup.addEventListener( 'dispose', onUniformsGroupsDispose );
+
+			uniformsGroups[ uniformsGroup.id ] = new WeakRef( uniformsGroup );
+			registry.register( uniformsGroup, uniformsGroup.id, uniformsGroup );
 
 		}
 
@@ -412,6 +418,9 @@ function WebGLUniformsGroups( gl, info, capabilities, state ) {
 
 		uniformsGroup.removeEventListener( 'dispose', onUniformsGroupsDispose );
 
+		delete uniformsGroups[ uniformsGroup.id ];
+		registry.unregister( uniformsGroup );
+
 		gl.deleteBuffer( buffers[ uniformsGroup.id ] );
 
 		delete buffers[ uniformsGroup.id ];
@@ -420,6 +429,21 @@ function WebGLUniformsGroups( gl, info, capabilities, state ) {
 	}
 
 	function dispose() {
+
+		for ( const id in uniformsGroups ) {
+
+			const uniformsGroup = uniformsGroups[ id ].deref();
+
+			if ( uniformsGroup !== undefined ) {
+
+				uniformsGroup.removeEventListener( 'dispose', onUniformsGroupsDispose );
+				registry.unregister( uniformsGroup );
+
+			}
+
+		}
+
+		uniformsGroups = {};
 
 		for ( const id in buffers ) {
 

@@ -2,6 +2,9 @@ function WebGLObjects( gl, geometries, attributes, bindingStates, info ) {
 
 	let updateMap = new WeakMap();
 
+	const instancedMeshes = {};
+	const registry = new FinalizationRegistry( ( id ) => delete instancedMeshes[ id ] );
+
 	function update( object ) {
 
 		const frame = info.render.frame;
@@ -21,9 +24,12 @@ function WebGLObjects( gl, geometries, attributes, bindingStates, info ) {
 
 		if ( object.isInstancedMesh ) {
 
-			if ( object.hasEventListener( 'dispose', onInstancedMeshDispose ) === false ) {
+			if ( instancedMeshes[ object.id ] === undefined ) {
 
 				object.addEventListener( 'dispose', onInstancedMeshDispose );
+
+				instancedMeshes[ object.id ] = new WeakRef( object );
+				registry.register( object, object.id, object );
 
 			}
 
@@ -63,15 +69,30 @@ function WebGLObjects( gl, geometries, attributes, bindingStates, info ) {
 
 	function dispose() {
 
+		for ( const id in instancedMeshes ) {
+
+			const instancedMesh = instancedMeshes[ id ].deref();
+
+			if ( instancedMesh !== undefined ) destroyInstancedMesh( instancedMesh );
+
+		}
+
 		updateMap = new WeakMap();
 
 	}
 
 	function onInstancedMeshDispose( event ) {
 
-		const instancedMesh = event.target;
+		destroyInstancedMesh( event.target );
+
+	}
+
+	function destroyInstancedMesh( instancedMesh ) {
 
 		instancedMesh.removeEventListener( 'dispose', onInstancedMeshDispose );
+
+		delete instancedMeshes[ instancedMesh.id ];
+		registry.unregister( instancedMesh );
 
 		bindingStates.releaseStatesOfObject( instancedMesh );
 

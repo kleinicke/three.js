@@ -302,6 +302,11 @@ class WebGLRenderer {
 		const _this = this;
 
 		let _isContextLost = false;
+
+		// materials with a 'dispose' listener, so releasing the renderer can remove it
+
+		let _materials = {};
+		const _materialRegistry = new FinalizationRegistry( ( id ) => delete _materials[ id ] );
 		let _nodesHandler = null;
 
 		let _scratchFramebuffer = null;
@@ -1091,17 +1096,7 @@ class WebGLRenderer {
 			canvas.removeEventListener( 'webglcontextrestored', onContextRestore, false );
 			canvas.removeEventListener( 'webglcontextcreationerror', onContextCreationError, false );
 
-			background.dispose();
-			renderLists.dispose();
-			renderStates.dispose();
-			textures.dispose();
-			properties.dispose();
-			environments.dispose();
-			objects.dispose();
-			geometries.dispose();
-			bindingStates.dispose();
-			uniformsGroups.dispose();
-			programCache.dispose();
+			releaseContextResources();
 
 			xr.dispose();
 
@@ -1121,6 +1116,45 @@ class WebGLRenderer {
 			log( 'WebGLRenderer: Context Lost.' );
 
 			_isContextLost = true;
+
+			// The restore builds new internal state, so release the old one now. While the context is
+			// lost, the WebGL deletes below are no-ops; what matters is that geometries, textures and
+			// render targets drop the 'dispose' listeners bound to the old state. Otherwise each
+			// loss/restore cycle adds another listener per object, and disposing the object later
+			// deletes WebGL objects of a previous context (INVALID_OPERATION).
+
+			releaseContextResources();
+
+		}
+
+		function releaseContextResources() {
+
+			for ( const id in _materials ) {
+
+				const material = _materials[ id ].deref();
+
+				if ( material !== undefined ) {
+
+					material.removeEventListener( 'dispose', onMaterialDispose );
+					_materialRegistry.unregister( material );
+
+				}
+
+			}
+
+			_materials = {};
+
+			background.dispose();
+			renderLists.dispose();
+			renderStates.dispose();
+			textures.dispose();
+			properties.dispose();
+			environments.dispose();
+			objects.dispose();
+			geometries.dispose();
+			bindingStates.dispose();
+			uniformsGroups.dispose();
+			programCache.dispose();
 
 		}
 
@@ -1157,6 +1191,9 @@ class WebGLRenderer {
 			const material = event.target;
 
 			material.removeEventListener( 'dispose', onMaterialDispose );
+
+			delete _materials[ material.id ];
+			_materialRegistry.unregister( material );
 
 			deallocateMaterial( material );
 
@@ -2227,6 +2264,9 @@ class WebGLRenderer {
 				// new material
 
 				material.addEventListener( 'dispose', onMaterialDispose );
+
+				_materials[ material.id ] = new WeakRef( material );
+				_materialRegistry.register( material, material.id, material );
 
 				programs = new Map();
 				materialProperties.programs = programs;

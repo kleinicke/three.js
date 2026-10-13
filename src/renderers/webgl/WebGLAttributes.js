@@ -100,8 +100,6 @@ function WebGLAttributes( gl ) {
 			// update ranges in-place. This is safe because this method will clear the
 			// update ranges once updated.
 
-			updateRanges.sort( ( a, b ) => a.start - b.start );
-
 			// To merge the update ranges in-place, we work from left to right in the
 			// existing updateRanges array, merging ranges. This may result in a final
 			// array which is smaller than the original. This index tracks the last
@@ -113,6 +111,19 @@ function WebGLAttributes( gl ) {
 
 				const previousRange = updateRanges[ mergeIndex ];
 				const range = updateRanges[ i ];
+
+				// Merge ordered ranges without sorting. If a range precedes the
+				// last merged range, compact the prefix and sort before restarting.
+				// The prefix already covers every range removed by the splice.
+				if ( range.start < previousRange.start ) {
+
+					updateRanges.splice( mergeIndex + 1, i - mergeIndex - 1 );
+					updateRanges.sort( ( a, b ) => a.start - b.start );
+					mergeIndex = 0;
+					i = 0;
+					continue;
+
+				}
 
 				// We add one here to merge adjacent ranges. This is safe because ranges
 				// operate over positive integers.

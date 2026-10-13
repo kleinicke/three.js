@@ -3364,14 +3364,22 @@ class WebGLRenderer {
 
 					_gl.flush();
 
-					await probeAsync( _gl, sync, 4 );
+					try {
 
-					// read the data and delete the buffer
-					_gl.bindBuffer( _gl.PIXEL_PACK_BUFFER, glBuffer );
-					_gl.getBufferSubData( _gl.PIXEL_PACK_BUFFER, 0, buffer );
-					_gl.bindBuffer( _gl.PIXEL_PACK_BUFFER, null );
-					_gl.deleteBuffer( glBuffer );
-					_gl.deleteSync( sync );
+						await probeAsync( _gl, sync, 4 );
+
+						// read the data
+						_gl.bindBuffer( _gl.PIXEL_PACK_BUFFER, glBuffer );
+						_gl.getBufferSubData( _gl.PIXEL_PACK_BUFFER, 0, buffer );
+						_gl.bindBuffer( _gl.PIXEL_PACK_BUFFER, null );
+
+					} finally {
+
+						// delete the buffer, also when waiting failed
+						_gl.deleteBuffer( glBuffer );
+						_gl.deleteSync( sync );
+
+					}
 
 					return buffer;
 

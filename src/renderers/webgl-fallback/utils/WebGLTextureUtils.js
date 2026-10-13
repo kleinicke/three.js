@@ -1286,18 +1286,27 @@ class WebGLTextureUtils {
 		gl.readPixels( x, y, width, height, glFormat, glType, 0 );
 		gl.bindBuffer( gl.PIXEL_PACK_BUFFER, null );
 
-		await backend.utils._clientWaitAsync();
-
-		const dstBuffer = new typedArrayType( byteLength / typedArrayType.BYTES_PER_ELEMENT );
-
-		gl.bindBuffer( gl.PIXEL_PACK_BUFFER, buffer );
-		gl.getBufferSubData( gl.PIXEL_PACK_BUFFER, 0, dstBuffer );
-		gl.bindBuffer( gl.PIXEL_PACK_BUFFER, null );
+		// the read is recorded, so the framebuffer is not needed while waiting
 
 		backend.state.bindFramebuffer( gl.READ_FRAMEBUFFER, null );
 
-		gl.deleteBuffer( buffer );
 		gl.deleteFramebuffer( fb );
+
+		const dstBuffer = new typedArrayType( byteLength / typedArrayType.BYTES_PER_ELEMENT );
+
+		try {
+
+			await backend.utils._clientWaitAsync();
+
+			gl.bindBuffer( gl.PIXEL_PACK_BUFFER, buffer );
+			gl.getBufferSubData( gl.PIXEL_PACK_BUFFER, 0, dstBuffer );
+			gl.bindBuffer( gl.PIXEL_PACK_BUFFER, null );
+
+		} finally {
+
+			gl.deleteBuffer( buffer );
+
+		}
 
 		return dstBuffer;
 

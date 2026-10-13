@@ -1,5 +1,6 @@
 import { RGBA_ASTC_4x4_Format, RGBA_ASTC_5x4_Format, RGBA_ASTC_5x5_Format, RGBA_ASTC_6x5_Format, RGBA_ASTC_6x6_Format, RGBA_ASTC_8x5_Format, RGBA_ASTC_8x6_Format, RGBA_ASTC_8x8_Format, RGBA_ASTC_10x5_Format, RGBA_ASTC_10x6_Format, RGBA_ASTC_10x8_Format, RGBA_ASTC_10x10_Format, RGBA_ASTC_12x10_Format, RGBA_ASTC_12x12_Format, RGB_ETC1_Format, RGB_ETC2_Format, RGBA_ETC2_EAC_Format, R11_EAC_Format, SIGNED_R11_EAC_Format, RG11_EAC_Format, SIGNED_RG11_EAC_Format, RGBA_PVRTC_2BPPV1_Format, RGBA_PVRTC_4BPPV1_Format, RGB_PVRTC_2BPPV1_Format, RGB_PVRTC_4BPPV1_Format, RGBA_S3TC_DXT5_Format, RGBA_S3TC_DXT3_Format, RGBA_S3TC_DXT1_Format, RGB_S3TC_DXT1_Format, DepthFormat, DepthStencilFormat, RedFormat, RGBFormat, RGBAFormat, AlphaFormat, RedIntegerFormat, RGFormat, RGIntegerFormat, RGBAIntegerFormat, HalfFloatType, FloatType, UnsignedIntType, IntType, UnsignedShortType, ShortType, ByteType, UnsignedInt248Type, UnsignedInt5999Type, UnsignedShort5551Type, UnsignedShort4444Type, UnsignedByteType, RGBA_BPTC_Format, RGB_BPTC_SIGNED_Format, RGB_BPTC_UNSIGNED_Format, RED_RGTC1_Format, SIGNED_RED_RGTC1_Format, RED_GREEN_RGTC2_Format, SIGNED_RED_GREEN_RGTC2_Format, SRGBTransfer, NoColorSpace, UnsignedInt101111Type } from '../../../constants.js';
 import { ColorManagement } from '../../../math/ColorManagement.js';
+import { probeAsync } from '../../../utils.js';
 
 /**
  * A WebGL 2 backend utility module with common helpers.
@@ -268,11 +269,12 @@ class WebGLUtils {
 	/**
 	 * This method can be used to synchronize the CPU with the GPU by waiting until
 	 * ongoing GPU commands have been completed.
+	 * Polls with timers rather than `requestAnimationFrame()`, which does not run in hidden pages.
 	 *
 	 * @private
 	 * @return {Promise} A promise that resolves when all ongoing GPU commands have been completed.
 	 */
-	_clientWaitAsync() {
+	async _clientWaitAsync() {
 
 		const { gl } = this;
 
@@ -280,37 +282,15 @@ class WebGLUtils {
 
 		gl.flush();
 
-		return new Promise( ( resolve, reject ) => {
+		try {
 
-			function test() {
+			await probeAsync( gl, sync, 4 );
 
-				const res = gl.clientWaitSync( sync, gl.SYNC_FLUSH_COMMANDS_BIT, 0 );
+		} finally {
 
-				if ( res === gl.WAIT_FAILED ) {
+			gl.deleteSync( sync );
 
-					gl.deleteSync( sync );
-
-					reject();
-					return;
-
-				}
-
-				if ( res === gl.TIMEOUT_EXPIRED ) {
-
-					requestAnimationFrame( test );
-					return;
-
-				}
-
-				gl.deleteSync( sync );
-
-				resolve();
-
-			}
-
-			test();
-
-		} );
+		}
 
 	}
 

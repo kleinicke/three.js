@@ -392,7 +392,7 @@ function probeAsync( gl, sync, interval ) {
 			switch ( gl.clientWaitSync( sync, gl.SYNC_FLUSH_COMMANDS_BIT, 0 ) ) {
 
 				case gl.WAIT_FAILED:
-					reject();
+					reject( new Error( 'THREE.probeAsync: Waiting for the GPU failed.' ) );
 					break;
 
 				case gl.TIMEOUT_EXPIRED:

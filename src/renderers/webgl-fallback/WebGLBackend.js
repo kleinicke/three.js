@@ -1563,7 +1563,7 @@ class WebGLBackend extends Backend {
 
 					} else {
 
-						requestAnimationFrame( checkStatus );
+						setTimeout( checkStatus, 4 ); // not requestAnimationFrame(), which does not run in hidden pages
 
 					}
 
@@ -1855,7 +1855,7 @@ class WebGLBackend extends Backend {
 
 					} else {
 
-						requestAnimationFrame( checkStatus );
+						setTimeout( checkStatus, 4 ); // not requestAnimationFrame(), which does not run in hidden pages
 
 					}
 

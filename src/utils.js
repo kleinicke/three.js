@@ -349,7 +349,8 @@ function warnOnce( ...params ) {
 
 /**
  * Yields execution to the main thread to allow rendering and other tasks.
- * Uses scheduler.yield() when available (Chrome 115+), falls back to requestAnimationFrame.
+ * Uses scheduler.yield() when available (Chrome 115+), falls back to a message channel task.
+ * Unlike `requestAnimationFrame()` and timers, these are neither paused nor throttled in hidden pages.
  *
  * @return {Promise<void>}
  */
@@ -363,7 +364,9 @@ function yieldToMain() {
 
 	return new Promise( resolve => {
 
-		requestAnimationFrame( resolve );
+		const channel = new MessageChannel();
+		channel.port1.onmessage = () => resolve();
+		channel.port2.postMessage( null );
 
 	} );
 

@@ -216,7 +216,7 @@ class Geometries extends DataMap {
 
 			if ( index !== null ) {
 
-				this.attributes.delete( index );
+				this._deleteAttribute( index );
 
 			}
 
@@ -224,7 +224,7 @@ class Geometries extends DataMap {
 
 			for ( const attribute of Object.values( geometry.attributes ) ) {
 
-				this.attributes.delete( this.backend.getBufferAttribute( attribute ) );
+				this._deleteAttribute( attribute );
 
 			}
 
@@ -408,11 +408,30 @@ class Geometries extends DataMap {
 
 			if ( currentAttributes.has( attribute ) === false ) {
 
-				this.attributes.delete( this.backend.getBufferAttribute( attribute ) );
+				this._deleteAttribute( attribute );
 
 			}
 
 		}
+
+	}
+
+	/**
+	 * Deletes the buffer of the given geometry or node attribute. Storage attributes
+	 * are skipped: they can be shared with compute shaders and other geometries, and
+	 * their GPU data may only exist on the GPU, so they are released by their own
+	 * `dispose()` instead.
+	 *
+	 * @private
+	 * @param {BufferAttribute|InterleavedBufferAttribute} attribute - The attribute.
+	 */
+	_deleteAttribute( attribute ) {
+
+		const bufferAttribute = this.backend.getBufferAttribute( attribute );
+
+		if ( bufferAttribute.isStorageBufferAttribute === true || bufferAttribute.isStorageInstancedBufferAttribute === true ) return;
+
+		this.attributes.delete( bufferAttribute );
 
 	}
 

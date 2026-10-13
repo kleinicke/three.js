@@ -1164,6 +1164,68 @@ class WebGPUBackend extends Backend {
 	}
 
 	/**
+	 * Returns `true` if the render pass state differs from the stencil reference
+	 * and blend constant the given materials need.
+	 *
+	 * @private
+	 * @param {Object} renderContextData - The render context data.
+	 * @param {?Material} stencilMaterial - The material providing the stencil reference.
+	 * @param {?Material} blendMaterial - The material providing the blend constant.
+	 * @return {boolean} Whether the pass state has to change.
+	 */
+	_needsPassState( renderContextData, stencilMaterial, blendMaterial ) {
+
+		if ( stencilMaterial !== null && stencilMaterial.stencilRef !== renderContextData.currentStencilRef ) return true;
+
+		if ( blendMaterial !== null && ( blendMaterial.blendColor.equals( renderContextData.currentBlendColor ) === false || blendMaterial.blendAlpha !== renderContextData.currentBlendAlpha ) ) return true;
+
+		return false;
+
+	}
+
+	/**
+	 * Sets the stencil reference and blend constant the given materials need,
+	 * skipping values the render pass already has.
+	 *
+	 * @private
+	 * @param {GPURenderPassEncoder} passEncoderGPU - The render pass encoder.
+	 * @param {Object} renderContextData - The render context data.
+	 * @param {?Material} stencilMaterial - The material providing the stencil reference.
+	 * @param {?Material} blendMaterial - The material providing the blend constant.
+	 */
+	_setPassState( passEncoderGPU, renderContextData, stencilMaterial, blendMaterial ) {
+
+		if ( stencilMaterial !== null && renderContextData.currentStencilRef !== stencilMaterial.stencilRef ) {
+
+			passEncoderGPU.setStencilReference( stencilMaterial.stencilRef );
+			renderContextData.currentStencilRef = stencilMaterial.stencilRef;
+
+		}
+
+		if ( blendMaterial !== null ) {
+
+			const blendColor = blendMaterial.blendColor;
+			const blendAlpha = blendMaterial.blendAlpha;
+
+			if ( blendColor.equals( renderContextData.currentBlendColor ) === false || blendAlpha !== renderContextData.currentBlendAlpha ) {
+
+				_blendConstant.r = blendColor.r;
+				_blendConstant.g = blendColor.g;
+				_blendConstant.b = blendColor.b;
+				_blendConstant.a = blendAlpha;
+
+				passEncoderGPU.setBlendConstant( _blendConstant );
+
+				renderContextData.currentBlendColor.copy( blendColor );
+				renderContextData.currentBlendAlpha = blendAlpha;
+
+			}
+
+		}
+
+	}
+
+	/**
 	 * Creates a render bundle encoder and state cache for each camera layer.
 	 *
 	 * @param {RenderContext} renderContext - The render context.
@@ -1415,9 +1477,33 @@ class WebGPUBackend extends Backend {
 		const renderContextData = this.get( renderContext );
 		const occlusionQueryCount = renderContext.occlusionQueryCount;
 
-		if ( renderContextData.renderBundles.length > 0 ) {
+		const renderBundles = renderContextData.renderBundles;
 
-			renderContextData.currentPass.executeBundles( renderContextData.renderBundles );
+		if ( renderBundles.length > 0 ) {
+
+			// bundles run in batches between which the pass sets the stencil reference and blend constant they need
+
+			const passEncoderGPU = renderContextData.currentPass;
+			let batch = [];
+
+			for ( const bundleData of renderBundles ) {
+
+				const { stencilMaterial, blendMaterial } = bundleData;
+
+				if ( this._needsPassState( renderContextData, stencilMaterial, blendMaterial ) ) {
+
+					if ( batch.length > 0 ) passEncoderGPU.executeBundles( batch );
+					batch = [];
+
+					this._setPassState( passEncoderGPU, renderContextData, stencilMaterial, blendMaterial );
+
+				}
+
+				batch.push( bundleData.bundleGPU );
+
+			}
+
+			passEncoderGPU.executeBundles( batch );
 
 		}
 
@@ -2106,33 +2192,50 @@ class WebGPUBackend extends Backend {
 			}
 
 		}
-		// stencil
+		// stencil reference and blend constant
 
-		if ( context.stencil === true && material.stencilWrite === true && renderContextData.currentStencilRef !== material.stencilRef ) {
+		const stencilMaterial = ( context.stencil === true && material.stencilWrite === true ) ? material : null;
+		const blendMaterial = ( material.blending === CustomBlending ) ? material : null;
 
-			passEncoderGPU.setStencilReference( material.stencilRef );
-			renderContextData.currentStencilRef = material.stencilRef;
+		if ( passEncoderGPU.setStencilReference !== undefined ) {
 
-		}
+			this._setPassState( passEncoderGPU, renderContextData, stencilMaterial, blendMaterial );
 
-		// blend constant
+		} else if ( stencilMaterial !== null || blendMaterial !== null ) {
 
-		if ( material.blending === CustomBlending && passEncoderGPU.setBlendConstant !== undefined ) {
+			// a render bundle can not set them: the render pass does before it executes the bundle
 
-			const blendColor = material.blendColor;
-			const blendAlpha = material.blendAlpha;
+			const bundleState = renderContextData.bundleState;
 
-			if ( blendColor.equals( renderContextData.currentBlendColor ) === false || blendAlpha !== renderContextData.currentBlendAlpha ) {
+			if ( bundleState === undefined || bundleState === null ) {
 
-				_blendConstant.r = blendColor.r;
-				_blendConstant.g = blendColor.g;
-				_blendConstant.b = blendColor.b;
-				_blendConstant.a = blendAlpha;
+				warnOnce( 'WebGPUBackend: Stencil reference and blend constant are not supported with array cameras.' );
 
-				passEncoderGPU.setBlendConstant( _blendConstant );
+			} else {
 
-				renderContextData.currentBlendColor.copy( blendColor );
-				renderContextData.currentBlendAlpha = blendAlpha;
+				if ( stencilMaterial !== null ) {
+
+					if ( bundleState.stencilMaterial !== null && bundleState.stencilMaterial.stencilRef !== stencilMaterial.stencilRef ) {
+
+						warnOnce( 'WebGPUBackend: All objects of a BundleGroup must use the same stencil reference.' );
+
+					}
+
+					bundleState.stencilMaterial = stencilMaterial;
+
+				}
+
+				if ( blendMaterial !== null ) {
+
+					if ( bundleState.blendMaterial !== null && ( bundleState.blendMaterial.blendColor.equals( blendMaterial.blendColor ) === false || bundleState.blendMaterial.blendAlpha !== blendMaterial.blendAlpha ) ) {
+
+						warnOnce( 'WebGPUBackend: All objects of a BundleGroup must use the same blend color.' );
+
+					}
+
+					bundleState.blendMaterial = blendMaterial;
+
+				}
 
 			}
 
@@ -2722,6 +2825,7 @@ class WebGPUBackend extends Backend {
 
 		renderContextData.currentSets = { attributes: {}, bindingGroups: [], pipeline: null, index: null };
 		renderContextData.currentPass = this.pipelineUtils.createBundleEncoder( renderContext );
+		renderContextData.bundleState = { stencilMaterial: null, blendMaterial: null };
 
 	}
 
@@ -2738,7 +2842,14 @@ class WebGPUBackend extends Backend {
 		const bundleEncoder = renderContextData.currentPass;
 		const bundleGPU = bundleEncoder.finish();
 
-		this.get( bundle ).bundleGPU = bundleGPU;
+		const bundleData = this.get( bundle );
+		const bundleState = renderContextData.bundleState;
+
+		bundleData.bundleGPU = bundleGPU;
+		bundleData.stencilMaterial = bundleState.stencilMaterial;
+		bundleData.blendMaterial = bundleState.blendMaterial;
+
+		renderContextData.bundleState = null;
 
 		// restore render pass state
 
@@ -2759,7 +2870,7 @@ class WebGPUBackend extends Backend {
 
 		const renderContextData = this.get( renderContext );
 
-		renderContextData.renderBundles.push( this.get( bundle ).bundleGPU );
+		renderContextData.renderBundles.push( this.get( bundle ) );
 
 	}
 

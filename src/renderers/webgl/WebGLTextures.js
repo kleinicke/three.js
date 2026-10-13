@@ -421,23 +421,36 @@ function WebGLTextures( _gl, extensions, state, properties, capabilities, utils,
 
 		if ( textureProperties.__webglInit === undefined ) return;
 
-		// check if it's necessary to remove the WebGLTexture object
+		releaseWebGLTexture( textureProperties );
 
-		const source = texture.source;
-		const webglTextures = _sources.get( source );
+		properties.remove( texture );
 
-		if ( webglTextures ) {
+	}
 
-			const webglTexture = webglTextures[ textureProperties.__cacheKey ];
-			webglTexture.usedTimes --;
+	// Releases the WebGLTexture a texture is bound to. The lookup uses the source
+	// and cache key the binding was made with, not the texture's current ones:
+	// texture.source can be replaced (e.g. by Texture.copy()) after the upload.
 
-			// the WebGLTexture object is not used anymore, remove it
+	function releaseWebGLTexture( textureProperties ) {
 
-			if ( webglTexture.usedTimes === 0 ) {
+		const source = textureProperties.__source;
+		const webglTextures = source !== undefined ? _sources.get( source ) : undefined;
 
-				deleteTexture( texture );
+		if ( webglTextures === undefined ) return;
 
-			}
+		const webglTexture = webglTextures[ textureProperties.__cacheKey ];
+
+		if ( webglTexture === undefined ) return;
+
+		webglTexture.usedTimes --;
+
+		// the WebGLTexture object is not used anymore, remove it
+
+		if ( webglTexture.usedTimes === 0 ) {
+
+			_gl.deleteTexture( webglTexture.texture );
+			delete webglTextures[ textureProperties.__cacheKey ];
+			info.memory.textures --;
 
 			// remove the weak map entry if no WebGLTexture uses the source anymore
 
@@ -448,21 +461,6 @@ function WebGLTextures( _gl, extensions, state, properties, capabilities, utils,
 			}
 
 		}
-
-		properties.remove( texture );
-
-	}
-
-	function deleteTexture( texture ) {
-
-		const textureProperties = properties.get( texture );
-		_gl.deleteTexture( textureProperties.__webglTexture );
-
-		const source = texture.source;
-		const webglTextures = _sources.get( source );
-		delete webglTextures[ textureProperties.__cacheKey ];
-
-		info.memory.textures --;
 
 	}
 
@@ -798,7 +796,7 @@ function WebGLTextures( _gl, extensions, state, properties, capabilities, utils,
 
 		const textureCacheKey = getTextureCacheKey( texture );
 
-		if ( textureCacheKey !== textureProperties.__cacheKey ) {
+		if ( textureCacheKey !== textureProperties.__cacheKey || source !== textureProperties.__source ) {
 
 			// if not, create a new instance of WebGLTexture
 
@@ -822,25 +820,14 @@ function WebGLTextures( _gl, extensions, state, properties, capabilities, utils,
 
 			webglTextures[ textureCacheKey ].usedTimes ++;
 
-			// every time the texture cache key changes, it's necessary to check if an instance of
+			// every time the texture cache key or source changes, it's necessary to check if an instance of
 			// WebGLTexture can be deleted in order to avoid a memory leak.
 
-			const webglTexture = webglTextures[ textureProperties.__cacheKey ];
+			releaseWebGLTexture( textureProperties );
 
-			if ( webglTexture !== undefined ) {
+			// store references to source, cache key and WebGLTexture object
 
-				webglTextures[ textureProperties.__cacheKey ].usedTimes --;
-
-				if ( webglTexture.usedTimes === 0 ) {
-
-					deleteTexture( texture );
-
-				}
-
-			}
-
-			// store references to cache key and WebGLTexture object
-
+			textureProperties.__source = source;
 			textureProperties.__cacheKey = textureCacheKey;
 			textureProperties.__webglTexture = webglTextures[ textureCacheKey ].texture;
 

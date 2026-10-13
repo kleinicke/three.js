@@ -147,6 +147,15 @@ class Geometries extends DataMap {
 		this.attributeCall = new WeakMap();
 
 		/**
+		 * Counts the geometries using each attribute buffer, so disposing a
+		 * geometry keeps the buffers that other geometries still use.
+		 *
+		 * @private
+		 * @type {WeakMap<BufferAttribute|InterleavedBuffer,number>}
+		 */
+		this._bufferUsers = new WeakMap();
+
+		/**
 		 * Stores weak references to the geometries with attached
 		 * `dispose` event listeners.
 		 *
@@ -212,19 +221,15 @@ class Geometries extends DataMap {
 
 			// index
 
-			const index = geometry.index;
+			// index and geometry attributes, unless another geometry still uses them
 
-			if ( index !== null ) {
+			if ( geometryData.buffers !== undefined ) {
 
-				this._deleteAttribute( index );
+				for ( const buffer of new Set( geometryData.buffers ) ) {
 
-			}
+					if ( this._releaseBuffer( buffer ) === true ) this._deleteAttribute( buffer );
 
-			// geometry attributes
-
-			for ( const attribute of Object.values( geometry.attributes ) ) {
-
-				this._deleteAttribute( attribute );
+				}
 
 			}
 
@@ -265,6 +270,8 @@ class Geometries extends DataMap {
 	 * @param {RenderObject} renderObject - The render object.
 	 */
 	updateAttributes( renderObject ) {
+
+		this._trackBuffers( renderObject.geometry );
 
 		// attributes
 
@@ -413,6 +420,95 @@ class Geometries extends DataMap {
 			}
 
 		}
+
+	}
+
+	/**
+	 * Records the attribute buffers and index of the given geometry, and counts
+	 * the geometries using each of them.
+	 *
+	 * @private
+	 * @param {BufferGeometry} geometry - The geometry.
+	 */
+	_trackBuffers( geometry ) {
+
+		const geometryData = this.get( geometry );
+		const geometryAttributes = geometry.attributes;
+		const geometryIndex = geometry.index;
+		const previous = geometryData.buffers;
+
+		// fast path: the geometry uses the same buffers as last time
+
+		if ( previous !== undefined ) {
+
+			let i = 0;
+			let changed = false;
+
+			for ( const name in geometryAttributes ) {
+
+				if ( previous[ i ++ ] !== this.backend.getBufferAttribute( geometryAttributes[ name ] ) ) {
+
+					changed = true;
+					break;
+
+				}
+
+			}
+
+			if ( changed === false && geometryIndex !== null && previous[ i ++ ] !== geometryIndex ) changed = true;
+
+			if ( changed === false && i === previous.length ) return;
+
+		}
+
+		const current = [];
+
+		for ( const name in geometryAttributes ) current.push( this.backend.getBufferAttribute( geometryAttributes[ name ] ) );
+
+		if ( geometryIndex !== null ) current.push( geometryIndex );
+
+		geometryData.buffers = current;
+
+		const currentSet = new Set( current );
+		const previousSet = new Set( previous );
+
+		for ( const buffer of currentSet ) {
+
+			if ( previousSet.has( buffer ) === false ) this._bufferUsers.set( buffer, ( this._bufferUsers.get( buffer ) || 0 ) + 1 );
+
+		}
+
+		// a buffer the geometry no longer uses is left to garbage collection, as before,
+		// since it may be set again (e.g. when alternating between two attributes)
+
+		for ( const buffer of previousSet ) {
+
+			if ( currentSet.has( buffer ) === false ) this._releaseBuffer( buffer );
+
+		}
+
+	}
+
+	/**
+	 * Decrements the number of geometries using the given buffer.
+	 *
+	 * @private
+	 * @param {BufferAttribute|InterleavedBuffer} buffer - The buffer.
+	 * @return {boolean} Whether no geometry uses the buffer anymore.
+	 */
+	_releaseBuffer( buffer ) {
+
+		const users = ( this._bufferUsers.get( buffer ) || 0 ) - 1;
+
+		if ( users > 0 ) {
+
+			this._bufferUsers.set( buffer, users );
+			return false;
+
+		}
+
+		this._bufferUsers.delete( buffer );
+		return true;
 
 	}
 

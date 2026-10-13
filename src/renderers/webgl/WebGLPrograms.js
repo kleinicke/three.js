@@ -434,6 +434,13 @@ function WebGLPrograms( renderer, environments, extensions, capabilities, bindin
 
 		}
 
+		// these change the compiled program for raw shaders as well
+
+		array.push( parameters.glslVersion );
+		array.push( parameters.index0AttributeName );
+		array.push( parameters.extensionClipCullDistance );
+		array.push( parameters.extensionMultiDraw );
+
 		if ( parameters.isRawShaderMaterial === false ) {
 
 			getProgramCacheKeyParameters( array, parameters );

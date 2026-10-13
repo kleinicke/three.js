@@ -203,9 +203,21 @@ class PointsNodeMaterial extends SpriteNodeMaterial {
 
 const scale = /*@__PURE__*/ uniform( 1 ).setGroup( renderGroup ).onRenderUpdate( function ( { renderer } ) {
 
-	const size = renderer.getSize( _size ); // logical units
+	// half the height of the target being rendered to, in logical units, like WebGLRenderer
 
-	this.value = 0.5 * size.y;
+	const renderTarget = renderer.getRenderTarget();
+
+	if ( renderTarget !== null && renderTarget.isXRRenderTarget !== true ) {
+
+		this.value = 0.5 * renderTarget.height / renderer.getPixelRatio();
+
+	} else {
+
+		const size = renderer.getSize( _size ); // logical units
+
+		this.value = 0.5 * size.y;
+
+	}
 
 } );
 

@@ -390,7 +390,7 @@ class InterleavedBufferAttribute {
 
 		this.data.array[ index + 0 ] = x;
 		this.data.array[ index + 1 ] = y;
-		this.data.array[ index + 2 ] = z;
+		if ( this.itemSize > 2 ) this.data.array[ index + 2 ] = z;
 
 		return this;
 
@@ -421,8 +421,8 @@ class InterleavedBufferAttribute {
 
 		this.data.array[ index + 0 ] = x;
 		this.data.array[ index + 1 ] = y;
-		this.data.array[ index + 2 ] = z;
-		this.data.array[ index + 3 ] = w;
+		if ( this.itemSize > 2 ) this.data.array[ index + 2 ] = z;
+		if ( this.itemSize > 3 ) this.data.array[ index + 3 ] = w;
 
 		return this;
 

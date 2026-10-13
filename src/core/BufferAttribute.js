@@ -591,7 +591,7 @@ class BufferAttribute extends EventDispatcher {
 
 		this.array[ index + 0 ] = x;
 		this.array[ index + 1 ] = y;
-		this.array[ index + 2 ] = z;
+		if ( this.itemSize > 2 ) this.array[ index + 2 ] = z;
 
 		return this;
 
@@ -622,8 +622,8 @@ class BufferAttribute extends EventDispatcher {
 
 		this.array[ index + 0 ] = x;
 		this.array[ index + 1 ] = y;
-		this.array[ index + 2 ] = z;
-		this.array[ index + 3 ] = w;
+		if ( this.itemSize > 2 ) this.array[ index + 2 ] = z;
+		if ( this.itemSize > 3 ) this.array[ index + 3 ] = w;
 
 		return this;
 
@@ -988,7 +988,7 @@ class Float16BufferAttribute extends BufferAttribute {
 
 		this.array[ index + 0 ] = toHalfFloat( x );
 		this.array[ index + 1 ] = toHalfFloat( y );
-		this.array[ index + 2 ] = toHalfFloat( z );
+		if ( this.itemSize > 2 ) this.array[ index + 2 ] = toHalfFloat( z );
 
 		return this;
 
@@ -1009,8 +1009,8 @@ class Float16BufferAttribute extends BufferAttribute {
 
 		this.array[ index + 0 ] = toHalfFloat( x );
 		this.array[ index + 1 ] = toHalfFloat( y );
-		this.array[ index + 2 ] = toHalfFloat( z );
-		this.array[ index + 3 ] = toHalfFloat( w );
+		if ( this.itemSize > 2 ) this.array[ index + 2 ] = toHalfFloat( z );
+		if ( this.itemSize > 3 ) this.array[ index + 3 ] = toHalfFloat( w );
 
 		return this;
 

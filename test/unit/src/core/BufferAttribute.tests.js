@@ -13,6 +13,7 @@ import {
 
 import { DynamicDrawUsage, StaticDrawUsage, FloatType } from '../../../../src/constants.js';
 import { toHalfFloat, fromHalfFloat } from '../../../../src/extras/DataUtils.js';
+import { Vector4 } from '../../../../src/math/Vector4.js';
 
 export default QUnit.module( 'Core', () => {
 
@@ -147,6 +148,20 @@ export default QUnit.module( 'Core', () => {
 			a.setXYZ( 1, - 4, - 5, - 6 );
 
 			assert.deepEqual( a.array, expected, 'Check for the correct values' );
+
+		} );
+
+		QUnit.test( 'fewer components than written or read', ( assert ) => {
+
+			const a = new BufferAttribute( new Float32Array( [ 1, 2, 3, 4, 5, 6 ] ), 2 );
+			a.setXYZ( 0, 7, 8, 9 );
+			a.setXYZW( 1, 10, 11, 12, 13 );
+			assert.deepEqual( Array.from( a.array ), [ 7, 8, 10, 11, 5, 6 ], 'setXYZ and setXYZW do not write into the next item' );
+
+			const b = new BufferAttribute( new Float32Array( [ 1, 2, 3, 4, 5, 6 ] ), 3 );
+			b.setXYZW( 0, 7, 8, 9, 10 );
+			assert.deepEqual( Array.from( b.array ), [ 7, 8, 9, 4, 5, 6 ], 'setXYZW does not write into the next item' );
+			assert.deepEqual( new Vector4().fromBufferAttribute( b, 0 ).toArray(), [ 7, 8, 9, 1 ], 'missing w reads as 1' );
 
 		} );
 

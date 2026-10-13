@@ -361,6 +361,19 @@ export default QUnit.module( 'Core', () => {
 
 		} );
 
+		QUnit.test( 'two-component positions', ( assert ) => {
+
+			const geometry = new BufferGeometry();
+			geometry.setAttribute( 'position', new BufferAttribute( new Float32Array( [ 0, 0, 10, 10, 20, 20 ] ), 2 ) );
+			geometry.translate( 1, 2, 3 );
+
+			assert.deepEqual( Array.from( geometry.attributes.position.array ), [ 1, 2, 11, 12, 21, 22 ], 'translate keeps every vertex' );
+
+			geometry.computeBoundingBox();
+			assert.ok( geometry.boundingBox.min.equals( new Vector3( 1, 2, 0 ) ) && geometry.boundingBox.max.equals( new Vector3( 21, 22, 0 ) ), 'box uses z = 0' );
+
+		} );
+
 		QUnit.test( 'computeBoundingBox', ( assert ) => {
 
 			let bb = getBBForVertices( [ - 1, - 2, - 3, 13, - 2, - 3.5, - 1, - 20, 0, - 4, 5, 6 ] );

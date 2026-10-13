@@ -1204,7 +1204,7 @@ class Vector3 {
 
 		this.x = attribute.getX( index );
 		this.y = attribute.getY( index );
-		this.z = attribute.getZ( index );
+		this.z = attribute.itemSize > 2 ? attribute.getZ( index ) : 0; // e.g. 2D positions
 
 		return this;
 

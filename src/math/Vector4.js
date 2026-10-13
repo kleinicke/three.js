@@ -1025,8 +1025,9 @@ class Vector4 {
 
 		this.x = attribute.getX( index );
 		this.y = attribute.getY( index );
-		this.z = attribute.getZ( index );
-		this.w = attribute.getW( index );
+		// missing components default like vertex attributes on the GPU
+		this.z = attribute.itemSize > 2 ? attribute.getZ( index ) : 0;
+		this.w = attribute.itemSize > 3 ? attribute.getW( index ) : 1;
 
 		return this;
 

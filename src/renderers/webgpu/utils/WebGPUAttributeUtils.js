@@ -54,7 +54,7 @@ function padItems( source, target, start, count, itemSize, paddedItemSize ) {
 	for ( let i = start, end = start + count; i < end; i ++ ) {
 
 		const sourceOffset = i * itemSize;
-		const targetOffset = i * paddedItemSize;
+		const targetOffset = ( i - start ) * paddedItemSize;
 
 		for ( let j = 0; j < itemSize; j ++ ) {
 
@@ -269,7 +269,7 @@ class WebGPUAttributeUtils {
 		const bufferData = backend.get( bufferAttribute );
 		const buffer = backend.get( bufferAttribute ).buffer;
 
-		let array = bufferAttribute.array;
+		const array = bufferAttribute.array;
 
 		const itemSize = bufferData._itemSize;
 		const paddedItemSize = bufferData._paddedItemSize;
@@ -277,28 +277,44 @@ class WebGPUAttributeUtils {
 
 		if ( paddedItemSize !== undefined ) {
 
-			// if the attribute data were padded on upload, apply the same padding on updates.
-			// only the items written below need it
+			// the data were padded on upload, so pad the updated items the same way. Each range
+			// is padded on its own, padded items are whole multiples of 4 bytes.
 
-			array = new array.constructor( bufferAttribute.count * paddedItemSize );
+			const count = bufferAttribute.count;
+			const itemBytes = paddedItemSize * array.BYTES_PER_ELEMENT;
+
+			const write = ( start, end ) => {
+
+				const n = Math.min( end, count ) - start;
+
+				if ( n <= 0 ) return;
+
+				const padded = new array.constructor( n * paddedItemSize );
+				padItems( array, padded, start, n, itemSize, paddedItemSize );
+
+				device.queue.writeBuffer( buffer, start * itemBytes, padded );
+
+			};
 
 			if ( updateRanges.length === 0 ) {
 
-				padItems( bufferAttribute.array, array, 0, bufferAttribute.count, itemSize, paddedItemSize );
+				write( 0, count );
 
 			} else {
 
 				for ( let i = 0, l = updateRanges.length; i < l; i ++ ) {
 
 					const range = updateRanges[ i ];
-					const vertexStart = Math.floor( range.start / itemSize );
-					const vertexEnd = Math.min( Math.ceil( ( range.start + range.count ) / itemSize ), bufferAttribute.count );
 
-					padItems( bufferAttribute.array, array, vertexStart, vertexEnd - vertexStart, itemSize, paddedItemSize );
+					write( Math.floor( range.start / itemSize ), Math.ceil( ( range.start + range.count ) / itemSize ) );
 
 				}
 
+				bufferAttribute.clearUpdateRanges();
+
 			}
+
+			return;
 
 		}
 
@@ -326,21 +342,8 @@ class WebGPUAttributeUtils {
 			for ( let i = 0, l = updateRanges.length; i < l; i ++ ) {
 
 				const range = updateRanges[ i ];
-				let dataOffset, size;
-
-				if ( paddedItemSize !== undefined ) {
-
-					const vertexStart = Math.floor( range.start / itemSize );
-					const vertexCount = Math.min( Math.ceil( ( range.start + range.count ) / itemSize ), bufferAttribute.count ) - vertexStart;
-					dataOffset = vertexStart * paddedItemSize * byteOffsetFactor;
-					size = vertexCount * paddedItemSize * byteOffsetFactor;
-
-				} else {
-
-					dataOffset = range.start * byteOffsetFactor;
-					size = Math.min( range.count, array.length - range.start ) * byteOffsetFactor;
-
-				}
+				const dataOffset = range.start * byteOffsetFactor;
+				const size = Math.min( range.count, array.length - range.start ) * byteOffsetFactor;
 
 				// ranges are clamped to the array, writeBuffer throws on ranges running past its end
 				if ( size <= 0 ) continue;

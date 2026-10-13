@@ -10,6 +10,7 @@ const _inverseMatrix = /*@__PURE__*/ new Matrix4();
 const _ray = /*@__PURE__*/ new Ray();
 const _sphere = /*@__PURE__*/ new Sphere();
 const _position = /*@__PURE__*/ new Vector3();
+const _scale = /*@__PURE__*/ new Vector3();
 
 /**
  * A class for displaying points or point clouds.
@@ -129,7 +130,9 @@ class Points extends Object3D {
 		_inverseMatrix.copy( matrixWorld ).invert();
 		_ray.copy( raycaster.ray ).applyMatrix4( _inverseMatrix );
 
-		const localThreshold = threshold / ( ( this.scale.x + this.scale.y + this.scale.z ) / 3 );
+		// the threshold is in world units, so convert it with the world scale (including parents)
+		_scale.setFromMatrixScale( matrixWorld );
+		const localThreshold = threshold / ( ( _scale.x + _scale.y + _scale.z ) / 3 );
 		const localThresholdSq = localThreshold * localThreshold;
 
 		const index = geometry.index;

@@ -17,6 +17,7 @@ const _sphere = /*@__PURE__*/ new Sphere();
 
 const _intersectPointOnRay = /*@__PURE__*/ new Vector3();
 const _intersectPointOnSegment = /*@__PURE__*/ new Vector3();
+const _scale = /*@__PURE__*/ new Vector3();
 
 /**
  * A continuous line. The line are rendered by connecting consecutive
@@ -191,7 +192,9 @@ class Line extends Object3D {
 		_inverseMatrix.copy( matrixWorld ).invert();
 		_ray.copy( raycaster.ray ).applyMatrix4( _inverseMatrix );
 
-		const localThreshold = threshold / ( ( this.scale.x + this.scale.y + this.scale.z ) / 3 );
+		// the threshold is in world units, so convert it with the world scale (including parents)
+		_scale.setFromMatrixScale( matrixWorld );
+		const localThreshold = threshold / ( ( _scale.x + _scale.y + _scale.z ) / 3 );
 		const localThresholdSq = localThreshold * localThreshold;
 
 		const step = this.isLineSegments ? 2 : 1;

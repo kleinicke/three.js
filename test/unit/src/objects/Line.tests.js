@@ -2,6 +2,10 @@ import { Line } from '../../../../src/objects/Line.js';
 
 import { Object3D } from '../../../../src/core/Object3D.js';
 import { Material } from '../../../../src/materials/Material.js';
+import { BufferGeometry } from '../../../../src/core/BufferGeometry.js';
+import { BufferAttribute } from '../../../../src/core/BufferAttribute.js';
+import { Raycaster } from '../../../../src/core/Raycaster.js';
+import { Vector3 } from '../../../../src/math/Vector3.js';
 
 export default QUnit.module( 'Objects', () => {
 
@@ -62,6 +66,46 @@ export default QUnit.module( 'Objects', () => {
 			mesh1.material = new Material();
 			const copy2 = mesh2.clone();
 			assert.strictEqual( mesh2.material, copy2.material );
+
+		} );
+
+		QUnit.test( 'raycast', ( assert ) => {
+
+			// a unit segment along x, shown ten times larger; rays run along -z through x = 5
+
+			const geometry = new BufferGeometry();
+			geometry.setAttribute( 'position', new BufferAttribute( new Float32Array( [ 0, 0, 0, 1, 0, 0 ] ), 3 ) );
+
+			const hits = ( object, y ) => {
+
+				const raycaster = new Raycaster( new Vector3( 5, y, 10 ), new Vector3( 0, 0, - 1 ) );
+				raycaster.params.Line.threshold = 0.5;
+				return raycaster.intersectObject( object ).length;
+
+			};
+
+			const scaled = new Line( geometry );
+			scaled.scale.setScalar( 10 );
+			scaled.updateMatrixWorld();
+
+			const parent = new Object3D();
+			parent.scale.setScalar( 10 );
+			const child = new Line( geometry );
+			parent.add( child );
+			parent.updateMatrixWorld();
+
+			const mirrored = new Line( geometry );
+			mirrored.scale.set( - 10, 10, 10 );
+			mirrored.position.x = 10;
+			mirrored.updateMatrixWorld();
+
+			for ( const [ name, object ] of [ [ 'own scale', scaled ], [ 'parent scale', child ], [ 'mirrored scale', mirrored ] ] ) {
+
+				assert.strictEqual( hits( object, 0.3 ), 1, `${ name }: a ray 0.3 away hits` );
+				assert.strictEqual( hits( object, 1 ), 0, `${ name }: a ray 1 away misses` );
+				assert.strictEqual( hits( object, 3 ), 0, `${ name }: a ray 3 away misses` );
+
+			}
 
 		} );
 

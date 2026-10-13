@@ -699,8 +699,8 @@ function WebGLState( gl, extensions ) {
 				currentBlendDst = null;
 				currentBlendSrcAlpha = null;
 				currentBlendDstAlpha = null;
-				currentBlendColor.set( 0, 0, 0 );
-				currentBlendAlpha = 0;
+
+				// blendFunc() leaves the constant blend color alone, so its cache stays valid
 
 				currentBlending = blending;
 				currentPremultipledAlpha = premultipliedAlpha;

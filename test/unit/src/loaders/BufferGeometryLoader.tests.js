@@ -1,6 +1,9 @@
 import { BufferGeometryLoader } from '../../../../src/loaders/BufferGeometryLoader.js';
 
-import { BufferAttribute } from '../../../../src/core/BufferAttribute.js';
+import { BufferAttribute, Float16BufferAttribute } from '../../../../src/core/BufferAttribute.js';
+import { InstancedBufferGeometry } from '../../../../src/core/InstancedBufferGeometry.js';
+import { InstancedBufferAttribute } from '../../../../src/core/InstancedBufferAttribute.js';
+import { toHalfFloat } from '../../../../src/extras/DataUtils.js';
 import { BufferGeometry } from '../../../../src/core/BufferGeometry.js';
 import { InterleavedBuffer } from '../../../../src/core/InterleavedBuffer.js';
 import { InterleavedBufferAttribute } from '../../../../src/core/InterleavedBufferAttribute.js';
@@ -51,6 +54,27 @@ export default QUnit.module( 'Loaders', () => {
 				geometry2.getAttribute( 'attr' ),
 				'Serialized attribute can be deserialized correctly.'
 			);
+
+		} );
+
+		QUnit.test( 'parser - round trip of attribute and geometry state', ( assert ) => {
+
+			const geometry = new InstancedBufferGeometry();
+			geometry.setAttribute( 'position', new Float16BufferAttribute( [ 0.5, 1, 2 ].map( toHalfFloat ), 3 ) );
+			geometry.setAttribute( 'offset', new InstancedBufferAttribute( new Float32Array( 6 ), 3, false, 2 ) );
+			geometry.instanceCount = 3;
+			geometry.setDrawRange( 0, 1 );
+
+			const loaded = new BufferGeometryLoader().parse( JSON.parse( JSON.stringify( geometry.toJSON() ) ) );
+
+			assert.ok( loaded.attributes.position.isFloat16BufferAttribute, 'Float16BufferAttribute' );
+			assert.strictEqual( loaded.attributes.position.getX( 0 ), 0.5, 'half float values' );
+			assert.strictEqual( loaded.attributes.offset.meshPerAttribute, 2, 'meshPerAttribute' );
+			assert.strictEqual( loaded.instanceCount, 3, 'instanceCount' );
+			assert.deepEqual( loaded.drawRange, { start: 0, count: 1 }, 'drawRange' );
+
+			geometry.setDrawRange( 1, Infinity );
+			assert.strictEqual( new BufferGeometryLoader().parse( JSON.parse( JSON.stringify( geometry.toJSON() ) ) ).drawRange.count, Infinity, 'open drawRange' );
 
 		} );
 

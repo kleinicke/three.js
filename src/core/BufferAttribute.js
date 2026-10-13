@@ -876,6 +876,16 @@ class Float16BufferAttribute extends BufferAttribute {
 
 	}
 
+	toJSON() {
+
+		const data = super.toJSON();
+
+		data.isFloat16BufferAttribute = true;
+
+		return data;
+
+	}
+
 	getX( index ) {
 
 		let x = fromHalfFloat( this.array[ index * this.itemSize ] );

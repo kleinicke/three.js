@@ -1,5 +1,5 @@
 import { Sphere } from '../math/Sphere.js';
-import { BufferAttribute } from '../core/BufferAttribute.js';
+import { BufferAttribute, Float16BufferAttribute } from '../core/BufferAttribute.js';
 import { BufferGeometry } from '../core/BufferGeometry.js';
 import { FileLoader } from './FileLoader.js';
 import { Loader } from './Loader.js';
@@ -152,8 +152,8 @@ class BufferGeometryLoader extends Loader {
 			} else {
 
 				const typedArray = getTypedArray( attribute.type, attribute.array );
-				const bufferAttributeConstr = attribute.isInstancedBufferAttribute ? InstancedBufferAttribute : BufferAttribute;
-				bufferAttribute = new bufferAttributeConstr( typedArray, attribute.itemSize, attribute.normalized );
+				const bufferAttributeConstr = attribute.isInstancedBufferAttribute ? InstancedBufferAttribute : ( attribute.isFloat16BufferAttribute ? Float16BufferAttribute : BufferAttribute );
+				bufferAttribute = new bufferAttributeConstr( typedArray, attribute.itemSize, attribute.normalized, attribute.meshPerAttribute );
 
 			}
 
@@ -188,7 +188,8 @@ class BufferGeometryLoader extends Loader {
 					} else {
 
 						const typedArray = getTypedArray( attribute.type, attribute.array );
-						bufferAttribute = new BufferAttribute( typedArray, attribute.itemSize, attribute.normalized );
+						const bufferAttributeConstr = attribute.isFloat16BufferAttribute ? Float16BufferAttribute : BufferAttribute;
+						bufferAttribute = new bufferAttributeConstr( typedArray, attribute.itemSize, attribute.normalized );
 
 					}
 
@@ -234,6 +235,16 @@ class BufferGeometryLoader extends Loader {
 			geometry.boundingSphere = new Sphere().fromJSON( boundingSphere );
 
 		}
+
+		const drawRange = json.data.drawRange;
+
+		if ( drawRange !== undefined ) {
+
+			geometry.setDrawRange( drawRange.start, drawRange.count ?? Infinity );
+
+		}
+
+		if ( typeof json.instanceCount === 'number' ) geometry.instanceCount = json.instanceCount; // Infinity is stored as null
 
 		if ( json.name ) geometry.name = json.name;
 		if ( json.userData ) geometry.userData = json.userData;

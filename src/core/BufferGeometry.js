@@ -1375,6 +1375,14 @@ class BufferGeometry extends EventDispatcher {
 
 		}
 
+		const drawRange = this.drawRange;
+
+		if ( drawRange.start !== 0 || drawRange.count !== Infinity ) {
+
+			data.data.drawRange = { start: drawRange.start, count: drawRange.count }; // Infinity is stored as null
+
+		}
+
 		return data;
 
 	}

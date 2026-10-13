@@ -38,6 +38,35 @@ const typeArraysToVertexFormatPrefixForItemSize1 = new Map( [
 const _tail = new Uint8Array( 4 );
 
 /**
+ * Copies items from a tightly packed array into an array with a larger item stride.
+ *
+ * @private
+ * @function
+ * @param {TypedArray} source - The packed source array.
+ * @param {TypedArray} target - The padded target array.
+ * @param {number} start - The index of the first item to copy.
+ * @param {number} count - The number of items to copy.
+ * @param {number} itemSize - The item size of the source array.
+ * @param {number} paddedItemSize - The item size of the target array.
+ */
+function padItems( source, target, start, count, itemSize, paddedItemSize ) {
+
+	for ( let i = start, end = start + count; i < end; i ++ ) {
+
+		const sourceOffset = i * itemSize;
+		const targetOffset = i * paddedItemSize;
+
+		for ( let j = 0; j < itemSize; j ++ ) {
+
+			target[ targetOffset + j ] = source[ sourceOffset + j ];
+
+		}
+
+	}
+
+}
+
+/**
  * Writes a range of a typed array into the given GPU buffer. `writeBuffer()` requires
  * the offset and size to be multiples of 4 bytes, so the range is expanded to the
  * element boundaries of the surrounding 4-byte word. The function assumes
@@ -180,11 +209,7 @@ class WebGPUAttributeUtils {
 
 				const paddedArray = new array.constructor( bufferAttribute.count * paddedItemSize );
 
-				for ( let i = 0; i < bufferAttribute.count; i ++ ) {
-
-					paddedArray.set( array.subarray( i * itemSize, i * itemSize + itemSize ), i * paddedItemSize );
-
-				}
+				padItems( array, paddedArray, 0, bufferAttribute.count, itemSize, paddedItemSize );
 
 				if ( bufferAttribute.isStorageBufferAttribute || bufferAttribute.isStorageInstancedBufferAttribute ) {
 
@@ -248,23 +273,34 @@ class WebGPUAttributeUtils {
 
 		const itemSize = bufferData._itemSize;
 		const paddedItemSize = bufferData._paddedItemSize;
+		const updateRanges = bufferAttribute.updateRanges;
 
 		if ( paddedItemSize !== undefined ) {
 
 			// if the attribute data were padded on upload, apply the same padding on updates.
+			// only the items written below need it
 
 			array = new array.constructor( bufferAttribute.count * paddedItemSize );
 
-			for ( let i = 0; i < bufferAttribute.count; i ++ ) {
+			if ( updateRanges.length === 0 ) {
 
-				array.set( bufferAttribute.array.subarray( i * itemSize, i * itemSize + itemSize ), i * paddedItemSize );
+				padItems( bufferAttribute.array, array, 0, bufferAttribute.count, itemSize, paddedItemSize );
+
+			} else {
+
+				for ( let i = 0, l = updateRanges.length; i < l; i ++ ) {
+
+					const range = updateRanges[ i ];
+					const vertexStart = Math.floor( range.start / itemSize );
+					const vertexEnd = Math.min( Math.ceil( ( range.start + range.count ) / itemSize ), bufferAttribute.count );
+
+					padItems( bufferAttribute.array, array, vertexStart, vertexEnd - vertexStart, itemSize, paddedItemSize );
+
+				}
 
 			}
 
 		}
-
-
-		const updateRanges = bufferAttribute.updateRanges;
 
 		const needsAlignment = isTypedArray( array ) && array.BYTES_PER_ELEMENT < 4;
 

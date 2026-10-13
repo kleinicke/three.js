@@ -13,7 +13,7 @@ import { Sphere } from '../../../../src/math/Sphere.js';
 import { x, y, z } from '../../utils/math-constants.js';
 import { EventDispatcher } from '../../../../src/core/EventDispatcher.js';
 import { toHalfFloat } from '../../../../src/extras/DataUtils.js';
-import { StaticDrawUsage, FloatType } from '../../../../src/constants.js';
+import { StaticDrawUsage, FloatType, IntType } from '../../../../src/constants.js';
 
 const DegToRad = Math.PI / 180;
 
@@ -591,6 +591,24 @@ export default QUnit.module( 'Core', () => {
 			}
 
 			assert.ok( maxError < 0.001, `Float16: normals of a large mesh are finite and correct (max error ${ maxError })` );
+
+		} );
+
+		QUnit.test( 'toNonIndexed (attribute types)', ( assert ) => {
+
+			const geometry = new BufferGeometry();
+			geometry.setAttribute( 'position', new Float16BufferAttribute( [ 0, 0, 0, 1, 0, 0, 0, 1, 0 ].map( toHalfFloat ), 3 ) );
+			const id = new BufferAttribute( new Int32Array( [ 7, 8, 9 ] ), 1 );
+			id.gpuType = IntType;
+			geometry.setAttribute( 'id', id );
+			geometry.setIndex( [ 2, 1, 0 ] );
+
+			const result = geometry.toNonIndexed();
+
+			assert.ok( result.attributes.position.isFloat16BufferAttribute, 'half float attribute stays half float' );
+			assert.strictEqual( result.attributes.position.getX( 1 ), 1, 'half float values are decoded' );
+			assert.strictEqual( result.attributes.id.gpuType, IntType, 'integer attribute keeps its gpu type' );
+			assert.deepEqual( Array.from( result.attributes.id.array ), [ 9, 8, 7 ], 'integer values' );
 
 		} );
 

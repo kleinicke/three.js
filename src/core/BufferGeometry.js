@@ -2,7 +2,7 @@ import { Vector3 } from '../math/Vector3.js';
 import { Vector2 } from '../math/Vector2.js';
 import { Box3 } from '../math/Box3.js';
 import { EventDispatcher } from './EventDispatcher.js';
-import { BufferAttribute, Float32BufferAttribute, Uint16BufferAttribute, Uint32BufferAttribute } from './BufferAttribute.js';
+import { BufferAttribute, Float16BufferAttribute, Float32BufferAttribute, Uint16BufferAttribute, Uint32BufferAttribute } from './BufferAttribute.js';
 import { Sphere } from '../math/Sphere.js';
 import { Object3D } from './Object3D.js';
 import { Matrix4 } from '../math/Matrix4.js';
@@ -1178,7 +1178,11 @@ class BufferGeometry extends EventDispatcher {
 
 			}
 
-			return new BufferAttribute( array2, itemSize, normalized );
+			const Constructor = attribute.isFloat16BufferAttribute === true ? Float16BufferAttribute : BufferAttribute;
+			const attribute2 = new Constructor( array2, itemSize, normalized );
+			if ( attribute.gpuType !== undefined ) attribute2.gpuType = attribute.gpuType;
+
+			return attribute2;
 
 		}
 

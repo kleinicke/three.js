@@ -401,12 +401,25 @@ class Textures extends DataMap {
 
 					}
 
+					if ( textureData.isDefaultTexture === false && ( textureData.width !== width || textureData.height !== height || textureData.depth !== depth ) ) {
+
+						// texture storage is immutable, so a resized image needs a new texture
+
+						backend.destroyTexture( texture );
+
+						textureData.isDefaultTexture = undefined;
+
+					}
+
 					if ( textureData.isDefaultTexture === undefined || textureData.isDefaultTexture === true ) {
 
 						backend.createTexture( texture, options );
 
 						textureData.isDefaultTexture = false;
 						textureData.generation = texture.version;
+						textureData.width = width;
+						textureData.height = height;
+						textureData.depth = depth;
 
 					}
 

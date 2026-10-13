@@ -603,6 +603,20 @@ function WebGLTextures( _gl, extensions, state, properties, capabilities, utils,
 		array.push( texture.unpackAlignment );
 		array.push( texture.colorSpace );
 
+		// texture storage is immutable, so a resized image needs a new WebGLTexture
+
+		let image = Array.isArray( texture.image ) ? texture.image[ 0 ] : texture.image;
+
+		if ( image && image.isDataTexture ) image = image.image;
+
+		if ( image ) {
+
+			const dimensions = getDimensions( image );
+
+			array.push( dimensions.width, dimensions.height, image.depth );
+
+		}
+
 		return array.join();
 
 	}

@@ -331,16 +331,19 @@ class WebGPUAttributeUtils {
 				if ( paddedItemSize !== undefined ) {
 
 					const vertexStart = Math.floor( range.start / itemSize );
-					const vertexCount = Math.ceil( ( range.start + range.count ) / itemSize ) - vertexStart;
+					const vertexCount = Math.min( Math.ceil( ( range.start + range.count ) / itemSize ), bufferAttribute.count ) - vertexStart;
 					dataOffset = vertexStart * paddedItemSize * byteOffsetFactor;
 					size = vertexCount * paddedItemSize * byteOffsetFactor;
 
 				} else {
 
 					dataOffset = range.start * byteOffsetFactor;
-					size = range.count * byteOffsetFactor;
+					size = Math.min( range.count, array.length - range.start ) * byteOffsetFactor;
 
 				}
+
+				// ranges are clamped to the array, writeBuffer throws on ranges running past its end
+				if ( size <= 0 ) continue;
 
 				if ( needsAlignment ) {
 

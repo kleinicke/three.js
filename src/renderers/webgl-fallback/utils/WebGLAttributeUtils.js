@@ -197,8 +197,16 @@ class WebGLAttributeUtils {
 			for ( let i = 0, l = updateRanges.length; i < l; i ++ ) {
 
 				const range = updateRanges[ i ];
-				gl.bufferSubData( bufferType, range.start * array.BYTES_PER_ELEMENT,
-					array, range.start, range.count );
+
+				// clamp to the array, bufferSubData fails on ranges running past its end
+				const count = Math.min( range.count, array.length - range.start );
+
+				if ( count > 0 ) {
+
+					gl.bufferSubData( bufferType, range.start * array.BYTES_PER_ELEMENT,
+						array, range.start, count );
+
+				}
 
 			}
 

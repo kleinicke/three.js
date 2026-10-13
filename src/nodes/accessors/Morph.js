@@ -64,7 +64,14 @@ function getEntry( geometry ) {
 
 	if ( entry === undefined || entry.count !== morphTargetsCount ) {
 
-		if ( entry !== undefined ) entry.texture.dispose();
+		if ( entry !== undefined ) {
+
+			// the old listener holds the old texture and its data
+
+			geometry.removeEventListener( 'dispose', entry.dispose );
+			entry.texture.dispose();
+
+		}
 
 		const morphTargets = geometry.morphAttributes.position || [];
 		const morphNormals = geometry.morphAttributes.normal || [];
@@ -167,6 +174,8 @@ function getEntry( geometry ) {
 		}
 
 		geometry.addEventListener( 'dispose', disposeTexture );
+
+		entry.dispose = disposeTexture;
 
 	}
 

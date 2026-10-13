@@ -457,11 +457,7 @@ class WebGLRenderer {
 
 			state = new WebGLState( _gl, extensions );
 
-			if ( capabilities.reversedDepthBuffer && reversedDepthBuffer ) {
-
-				state.buffers.depth.setReversed( true );
-
-			}
+			restoreReversedDepth();
 
 			_scratchFramebuffer = _gl.createFramebuffer();
 			_srcFramebuffer = _gl.createFramebuffer();
@@ -971,6 +967,8 @@ class WebGLRenderer {
 		 */
 		this.clear = function ( color = true, depth = true, stencil = true ) {
 
+			restoreReversedDepth();
+
 			let bits = 0;
 
 			if ( color ) {
@@ -1439,6 +1437,8 @@ class WebGLRenderer {
 			if ( targetScene === null ) targetScene = scene;
 			if ( _nodesHandler !== null ) _nodesHandler.renderStart( scene, camera, targetScene );
 
+			restoreReversedDepth();
+
 			currentRenderState = renderStates.get( targetScene );
 			currentRenderState.init( camera );
 
@@ -1685,6 +1685,8 @@ class WebGLRenderer {
 			}
 
 			if ( _isContextLost === true ) return;
+
+			restoreReversedDepth();
 
 			// update node builder if available
 			if ( _nodesHandler !== null ) {
@@ -3703,6 +3705,19 @@ class WebGLRenderer {
 			state.unbindTexture();
 
 		};
+
+		// resetState() hands the context over with default clip control, so the reversed depth
+		// buffer is enabled again lazily, before the renderer next compiles, clears or draws
+
+		function restoreReversedDepth() {
+
+			if ( capabilities.reversedDepthBuffer && reversedDepthBuffer ) {
+
+				state.buffers.depth.setReversed( true );
+
+			}
+
+		}
 
 		/**
 		 * Can be used to reset the internal WebGL state. This method is mostly

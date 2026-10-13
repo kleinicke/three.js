@@ -93,7 +93,8 @@ function WebGLState( gl, extensions ) {
 
 					currentReversed = reversed;
 
-					const oldDepth = currentDepthClear;
+					// after reset() the clear depth is the default 1
+					const oldDepth = currentDepthClear !== null ? currentDepthClear : 1;
 					currentDepthClear = null;
 					this.setClear( oldDepth );
 

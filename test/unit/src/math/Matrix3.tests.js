@@ -340,6 +340,53 @@ export default QUnit.module( 'Maths', () => {
 
 		} );
 
+		QUnit.test( 'getNormalMatrix preserves inverse-transpose behavior', ( assert ) => {
+
+			const matrices = [
+				new Matrix4(),
+				new Matrix4().makeScale( 2, - 3, 0.5 ),
+				new Matrix4().makeScale( 0, 2, 3 ),
+				new Matrix4().makeScale( 1e-100, 1e-100, 1e-100 ),
+				new Matrix4().makeScale( 1e100, 1e100, 1e100 ),
+				new Matrix4().makeScale( Infinity, 1, 1 ),
+				new Matrix4().makeScale( NaN, 1, 1 ),
+				new Matrix4().makeScale( - 0, 1, 1 )
+			];
+
+			// General matrices also exercise shear and non-affine inputs. Keep the
+			// sequence deterministic so failures can be reproduced.
+			let seed = 42;
+			for ( let i = 0; i < 100; i ++ ) {
+
+				const matrix = new Matrix4();
+				for ( let j = 0; j < 16; j ++ ) {
+
+					seed = ( Math.imul( seed, 1664525 ) + 1013904223 ) >>> 0;
+					matrix.elements[ j ] = seed / 4294967296 * 4 - 2;
+
+				}
+
+				matrices.push( matrix );
+
+			}
+
+			const actual = new Matrix3();
+			const expected = new Matrix3();
+			const elements = actual.elements;
+
+			for ( const matrix of matrices ) {
+
+				const input = matrix.elements.slice();
+				expected.setFromMatrix4( matrix ).invert().transpose();
+				assert.strictEqual( actual.getNormalMatrix( matrix ), actual, 'Returns this' );
+				assert.strictEqual( actual.elements, elements, 'Reuses the output array' );
+				assert.ok( actual.elements.every( ( value, i ) => Object.is( value, expected.elements[ i ] ) ), 'Exact results, including signed zero and NaN' );
+				assert.deepEqual( matrix.elements, input, 'Does not modify the input' );
+
+			}
+
+		} );
+
 		QUnit.test( 'transposeIntoArray', ( assert ) => {
 
 			const a = new Matrix3().set( 0, 1, 2, 3, 4, 5, 6, 7, 8 );

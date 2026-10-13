@@ -1076,20 +1076,22 @@ class Matrix4 {
 		position.y = te[ 13 ];
 		position.z = te[ 14 ];
 
+		let sx = _v1.set( te[ 0 ], te[ 1 ], te[ 2 ] ).length();
+		const sy = _v1.set( te[ 4 ], te[ 5 ], te[ 6 ] ).length();
+		const sz = _v1.set( te[ 8 ], te[ 9 ], te[ 10 ] ).length();
+
 		const det = this.determinantAffine();
 
 		if ( det === 0 ) {
 
-			scale.set( 1, 1, 1 );
+			// keep the scale (e.g. an object scaled to zero), the rotation cannot be recovered
+
+			scale.set( sx, sy, sz );
 			quaternion.identity();
 
 			return this;
 
 		}
-
-		let sx = _v1.set( te[ 0 ], te[ 1 ], te[ 2 ] ).length();
-		const sy = _v1.set( te[ 4 ], te[ 5 ], te[ 6 ] ).length();
-		const sz = _v1.set( te[ 8 ], te[ 9 ], te[ 10 ] ).length();
 
 		// if determinant is negative, we need to invert one scale
 		if ( det < 0 ) sx = - sx;

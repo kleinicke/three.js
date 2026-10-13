@@ -688,6 +688,18 @@ export default QUnit.module( 'Maths', () => {
 
 		} );
 
+		QUnit.test( 'decompose (zero scale)', ( assert ) => {
+
+			const t = new Vector3(), r = new Quaternion(), s = new Vector3();
+
+			new Matrix4().makeScale( 2, 0, 3 ).setPosition( 1, 2, 3 ).decompose( t, r, s );
+
+			assert.ok( t.equals( new Vector3( 1, 2, 3 ) ), 'position' );
+			assert.ok( s.equals( new Vector3( 2, 0, 3 ) ), 'scale is kept' );
+			assert.ok( r.equals( new Quaternion() ), 'identity rotation' );
+
+		} );
+
 		QUnit.test( 'compose/decompose', ( assert ) => {
 
 			const tValues = [

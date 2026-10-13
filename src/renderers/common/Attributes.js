@@ -1,8 +1,6 @@
 import DataMap from './DataMap.js';
 import { AttributeType } from './Constants.js';
 
-import { DynamicDrawUsage } from '../../constants.js';
-
 /**
  * This renderer module manages geometry attributes.
  *
@@ -145,7 +143,7 @@ class Attributes extends DataMap {
 
 		} else {
 
-			if ( data.version < attribute.version || attribute.usage === DynamicDrawUsage ) {
+			if ( data.version < attribute.version ) {
 
 				this.backend.updateAttribute( attribute );
 

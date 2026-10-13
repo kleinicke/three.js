@@ -1,6 +1,7 @@
 import InputNode from '../core/InputNode.js';
 import { addMethodChaining, mat3, mat4 } from '../tsl/TSLCore.js';
 import { varying } from '../core/VaryingNode.js';
+import { NodeUpdateType } from '../core/constants.js';
 
 import { InterleavedBufferAttribute } from '../../core/InterleavedBufferAttribute.js';
 import { InterleavedBuffer } from '../../core/InterleavedBuffer.js';
@@ -221,6 +222,12 @@ class BufferAttributeNode extends InputNode {
 	 */
 	setup( builder ) {
 
+		// Dynamic attribute nodes are uploaded once per render, also when their data
+		// were changed without a version bump (e.g. a plain typed array written per frame).
+		// Geometry attributes only upload when their version changes, as in WebGLRenderer.
+
+		this.updateBeforeType = this.usage === DynamicDrawUsage ? NodeUpdateType.RENDER : NodeUpdateType.NONE;
+
 		if ( this.attribute !== null ) return;
 
 		//
@@ -253,6 +260,17 @@ class BufferAttributeNode extends InputNode {
 
 		this.attribute = bufferAttribute;
 		this.attribute.isInstancedBufferAttribute = this.instanced; // @TODO: Add a possible: InstancedInterleavedBufferAttribute
+
+	}
+
+	/**
+	 * Marks dynamic attribute data for upload before each render.
+	 *
+	 * @param {NodeFrame} frame - The current node frame.
+	 */
+	updateBefore( /*frame*/ ) {
+
+		this.attribute.needsUpdate = true;
 
 	}
 

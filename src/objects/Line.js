@@ -223,7 +223,9 @@ class Line extends Object3D {
 
 			}
 
-			if ( this.isLineLoop ) {
+			// the closing segment exists only for three or more vertices
+
+			if ( this.isLineLoop && end - start > 2 ) {
 
 				const a = index.getX( end - 1 );
 				const b = index.getX( start );
@@ -255,7 +257,9 @@ class Line extends Object3D {
 
 			}
 
-			if ( this.isLineLoop ) {
+			// the closing segment exists only for three or more vertices
+
+			if ( this.isLineLoop && end - start > 2 ) {
 
 				const intersect = checkIntersection( this, raycaster, _ray, localThresholdSq, end - 1, start, end - 1 );
 

@@ -437,6 +437,42 @@ export default QUnit.module( 'Core', () => {
 
 		} );
 
+		QUnit.test( 'computeTangents', ( assert ) => {
+
+			// a unit quad in the xy plane, u along +x and v along +y
+			const makeQuad = () => {
+
+				const geometry = new BufferGeometry();
+				geometry.setAttribute( 'position', new BufferAttribute( new Float32Array( [ 0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0 ] ), 3 ) );
+				geometry.setAttribute( 'normal', new BufferAttribute( new Float32Array( [ 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1 ] ), 3 ) );
+				geometry.setAttribute( 'uv', new BufferAttribute( new Float32Array( [ 0, 0, 1, 0, 1, 1, 0, 1 ] ), 2 ) );
+				geometry.setIndex( [ 0, 1, 2, 0, 2, 3 ] );
+				return geometry;
+
+			};
+
+			const geometry = makeQuad();
+			geometry.computeTangents();
+			const tangent = geometry.attributes.tangent;
+
+			for ( let i = 0; i < 4; i ++ ) {
+
+				assert.deepEqual( [ tangent.getX( i ), tangent.getY( i ), tangent.getZ( i ), tangent.getW( i ) ], [ 1, 0, 0, 1 ], 'tangent ' + i );
+
+			}
+
+			const grouped = makeQuad();
+			grouped.addGroup( 0, Infinity, 0 );
+			grouped.computeTangents();
+			assert.deepEqual( Array.from( grouped.attributes.tangent.array ), Array.from( tangent.array ), 'a group with an infinite count covers the whole index' );
+
+			const partial = makeQuad();
+			partial.addGroup( 0, 4, 0 );
+			partial.computeTangents();
+			assert.deepEqual( Array.from( partial.attributes.tangent.array.slice( 12 ) ), [ 0, 0, 0, 0 ], 'a partial triangle in a group is skipped' );
+
+		} );
+
 		QUnit.test( 'computeVertexNormals', ( assert ) => {
 
 			// get normals for a counter clockwise created triangle

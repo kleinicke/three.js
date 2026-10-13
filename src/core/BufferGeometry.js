@@ -871,15 +871,11 @@ class BufferGeometry extends EventDispatcher {
 
 		}
 
-		const tan1 = [], tan2 = [];
+		// per-vertex sums of the triangle tangent (tan1) and bitangent (tan2) directions
+
+		const tan1 = new Float64Array( 3 * positionAttribute.count );
+		const tan2 = new Float64Array( 3 * positionAttribute.count );
 		const used = new Uint8Array( positionAttribute.count );
-
-		for ( let i = 0; i < positionAttribute.count; i ++ ) {
-
-			tan1[ i ] = new Vector3();
-			tan2[ i ] = new Vector3();
-
-		}
 
 		const vA = new Vector3(),
 			vB = new Vector3(),
@@ -919,13 +915,21 @@ class BufferGeometry extends EventDispatcher {
 			sdir.copy( vB ).multiplyScalar( uvC.y ).addScaledVector( vC, - uvB.y ).multiplyScalar( r );
 			tdir.copy( vC ).multiplyScalar( uvB.x ).addScaledVector( vB, - uvC.x ).multiplyScalar( r );
 
-			tan1[ a ].add( sdir );
-			tan1[ b ].add( sdir );
-			tan1[ c ].add( sdir );
+			addTo( tan1, a, sdir );
+			addTo( tan1, b, sdir );
+			addTo( tan1, c, sdir );
 
-			tan2[ a ].add( tdir );
-			tan2[ b ].add( tdir );
-			tan2[ c ].add( tdir );
+			addTo( tan2, a, tdir );
+			addTo( tan2, b, tdir );
+			addTo( tan2, c, tdir );
+
+		}
+
+		function addTo( array, i, v ) {
+
+			array[ 3 * i ] += v.x;
+			array[ 3 * i + 1 ] += v.y;
+			array[ 3 * i + 2 ] += v.z;
 
 		}
 
@@ -944,10 +948,12 @@ class BufferGeometry extends EventDispatcher {
 
 			const group = groups[ i ];
 
-			const start = group.start;
-			const count = group.count;
+			// whole triangles inside the index only; a group count may be Infinity
 
-			for ( let j = start, jl = start + count; j < jl; j += 3 ) {
+			const start = Math.max( group.start, 0 );
+			const end = Math.min( group.start + group.count, index.count );
+
+			for ( let j = start, jl = end - 2; j < jl; j += 3 ) {
 
 				handleTriangle(
 					index.getX( j + 0 ),
@@ -961,13 +967,14 @@ class BufferGeometry extends EventDispatcher {
 
 		const tmp = new Vector3(), tmp2 = new Vector3();
 		const n = new Vector3(), n2 = new Vector3();
+		const t = new Vector3(), t2 = new Vector3();
 
 		function handleVertex( v ) {
 
 			n.fromBufferAttribute( normalAttribute, v );
 			n2.copy( n );
 
-			const t = tan1[ v ];
+			t.fromArray( tan1, 3 * v );
 
 			// Gram-Schmidt orthogonalize
 
@@ -977,7 +984,7 @@ class BufferGeometry extends EventDispatcher {
 			// Calculate handedness
 
 			tmp2.crossVectors( n2, t );
-			const test = tmp2.dot( tan2[ v ] );
+			const test = tmp2.dot( t2.fromArray( tan2, 3 * v ) );
 			const w = ( test < 0.0 ) ? - 1.0 : 1.0;
 
 			tangentAttribute.setXYZW( v, tmp.x, tmp.y, tmp.z, w );

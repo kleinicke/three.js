@@ -318,7 +318,7 @@ class Mesh extends Object3D {
 					const start = Math.max( group.start, drawRange.start );
 					const end = Math.min( index.count, Math.min( ( group.start + group.count ), ( drawRange.start + drawRange.count ) ) );
 
-					for ( let j = start, jl = end; j < jl; j += 3 ) {
+					for ( let j = start, jl = end - 2; j < jl; j += 3 ) {
 
 						const a = index.getX( j );
 						const b = index.getX( j + 1 );
@@ -343,7 +343,7 @@ class Mesh extends Object3D {
 				const start = Math.max( 0, drawRange.start );
 				const end = Math.min( index.count, ( drawRange.start + drawRange.count ) );
 
-				for ( let i = start, il = end; i < il; i += 3 ) {
+				for ( let i = start, il = end - 2; i < il; i += 3 ) {
 
 					const a = index.getX( i );
 					const b = index.getX( i + 1 );
@@ -376,7 +376,7 @@ class Mesh extends Object3D {
 					const start = Math.max( group.start, drawRange.start );
 					const end = Math.min( position.count, Math.min( ( group.start + group.count ), ( drawRange.start + drawRange.count ) ) );
 
-					for ( let j = start, jl = end; j < jl; j += 3 ) {
+					for ( let j = start, jl = end - 2; j < jl; j += 3 ) {
 
 						const a = j;
 						const b = j + 1;
@@ -401,7 +401,7 @@ class Mesh extends Object3D {
 				const start = Math.max( 0, drawRange.start );
 				const end = Math.min( position.count, ( drawRange.start + drawRange.count ) );
 
-				for ( let i = start, il = end; i < il; i += 3 ) {
+				for ( let i = start, il = end - 2; i < il; i += 3 ) {
 
 					const a = i;
 					const b = i + 1;

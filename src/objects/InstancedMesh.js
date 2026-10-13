@@ -260,10 +260,7 @@ class InstancedMesh extends Mesh {
 		const matrixWorld = this.matrixWorld;
 		const raycastTimes = this.count;
 
-		_mesh.geometry = this.geometry;
-		_mesh.material = this.material;
-
-		if ( _mesh.material === undefined ) return;
+		if ( this.material === undefined ) return;
 
 		// test with bounding sphere first
 
@@ -273,6 +270,9 @@ class InstancedMesh extends Mesh {
 		_sphere.applyMatrix4( matrixWorld );
 
 		if ( raycaster.ray.intersectsSphere( _sphere ) === false ) return;
+
+		_mesh.geometry = this.geometry;
+		_mesh.material = this.material;
 
 		// now test each instance
 
@@ -304,6 +304,11 @@ class InstancedMesh extends Mesh {
 			_instanceIntersects.length = 0;
 
 		}
+
+		// release the references so the shared helper does not keep this geometry and material alive
+
+		_mesh.geometry = null;
+		_mesh.material = null;
 
 	}
 

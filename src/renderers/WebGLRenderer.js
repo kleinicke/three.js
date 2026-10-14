@@ -316,6 +316,7 @@ class WebGLRenderer {
 		let _currentActiveMipmapLevel = 0;
 		let _currentRenderTarget = null;
 		let _currentMaterialId = - 1;
+		let _transmissionPointsHeight = 0;
 
 		let _currentCamera = null;
 
@@ -2012,6 +2013,16 @@ class WebGLRenderer {
 
 		}
 
+		function getPointsHeight( renderTarget, camera ) {
+
+			// render target heights are in physical pixels, a view offset (e.g. GPU picking) keeps the canvas height
+
+			if ( renderTarget === null || renderTarget.isXRRenderTarget === true || ( camera.view && camera.view.enabled ) ) return _height;
+
+			return renderTarget.height / _pixelRatio;
+
+		}
+
 		function renderTransmissionPass( opaqueObjects, transmissiveObjects, scene, camera ) {
 
 			const overrideMaterial = scene.isScene === true ? scene.overrideMaterial : null;
@@ -2061,6 +2072,12 @@ class WebGLRenderer {
 			const currentRenderTarget = _this.getRenderTarget();
 			const currentActiveCubeFace = _this.getActiveCubeFace();
 			const currentActiveMipmapLevel = _this.getActiveMipmapLevel();
+
+			// the transmission target matches the viewport, so scale points like the pass it belongs to,
+			// restored at the end since opaque objects like Reflector can render nested transmission passes
+
+			const currentTransmissionPointsHeight = _transmissionPointsHeight;
+			_transmissionPointsHeight = getPointsHeight( currentRenderTarget, camera ) * _this.transmissionResolutionScale;
 
 			_this.setRenderTarget( transmissionRenderTarget );
 
@@ -2135,6 +2152,7 @@ class WebGLRenderer {
 			if ( currentCameraViewport !== undefined ) camera.viewport = currentCameraViewport;
 
 			_this.toneMapping = currentToneMapping;
+			_transmissionPointsHeight = currentTransmissionPointsHeight;
 
 		}
 
@@ -2811,7 +2829,10 @@ class WebGLRenderer {
 
 				}
 
-				materials.refreshMaterialUniforms( m_uniforms, material, _pixelRatio, _height, currentRenderState.state.transmissionRenderTarget[ camera.id ] );
+				const transmissionRenderTarget = currentRenderState.state.transmissionRenderTarget[ camera.id ];
+				const pointsHeight = _currentRenderTarget === transmissionRenderTarget ? _transmissionPointsHeight : getPointsHeight( _currentRenderTarget, camera );
+
+				materials.refreshMaterialUniforms( m_uniforms, material, _pixelRatio, pointsHeight, transmissionRenderTarget );
 
 				// light probe volume
 

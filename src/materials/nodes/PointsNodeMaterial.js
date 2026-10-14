@@ -113,7 +113,7 @@ class PointsNodeMaterial extends SpriteNodeMaterial {
 
 		if ( camera.isPerspectiveCamera && sizeAttenuation === true ) {
 
-			// follow WebGLRenderer's implementation, and scale by half the canvas height in logical units
+			// follow WebGLRenderer's implementation, and scale by half the render target (or canvas) height in logical units
 
 			pointSize = pointSize.mul( scale.div( positionView.z.negate() ) );
 
@@ -201,11 +201,21 @@ class PointsNodeMaterial extends SpriteNodeMaterial {
 
 }
 
-const scale = /*@__PURE__*/ uniform( 1 ).setGroup( renderGroup ).onRenderUpdate( function ( { renderer } ) {
+const scale = /*@__PURE__*/ uniform( 1 ).setGroup( renderGroup ).onRenderUpdate( function ( { renderer, camera } ) {
 
-	const size = renderer.getSize( _size ); // logical units
+	const renderTarget = renderer.getRenderTarget();
 
-	this.value = 0.5 * size.y;
+	// a view offset (e.g. GPU picking) keeps the canvas height
+
+	if ( renderTarget !== null && renderTarget.isXRRenderTarget !== true && ! ( camera.view && camera.view.enabled ) ) {
+
+		this.value = 0.5 * renderTarget.height / renderer.getPixelRatio();
+
+	} else {
+
+		this.value = 0.5 * renderer.getSize( _size ).y; // logical units
+
+	}
 
 } );
 

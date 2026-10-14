@@ -646,7 +646,27 @@ class RenderObject {
 
 		if ( geometry.isInstancedBufferGeometry === true ) {
 
+			// instanceCount defaults to Infinity, so clamp it to the instanced attributes
+
 			instanceCount = geometry.instanceCount;
+
+			for ( const attribute of this.getAttributes() ) {
+
+				if ( attribute.isInstancedBufferAttribute === true ) {
+
+					instanceCount = Math.min( instanceCount, attribute.meshPerAttribute * attribute.count );
+
+				} else if ( attribute.isInterleavedBufferAttribute === true && attribute.data.isInstancedInterleavedBuffer === true ) {
+
+					instanceCount = Math.min( instanceCount, attribute.data.meshPerAttribute * attribute.data.count );
+
+				}
+
+			}
+
+			// Infinity or not a number, unless an indirect draw takes the count from its buffer
+
+			if ( ! ( instanceCount < Infinity ) && this.getIndirect() === null ) return null;
 
 		} else if ( object.count !== undefined ) {
 

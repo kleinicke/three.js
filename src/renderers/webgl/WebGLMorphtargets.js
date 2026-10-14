@@ -21,7 +21,7 @@ function WebGLMorphtargets( gl, capabilities, textures ) {
 
 		if ( entry === undefined || entry.count !== morphTargetsCount ) {
 
-			if ( entry !== undefined ) entry.texture.dispose();
+			if ( entry !== undefined ) entry.dispose();
 
 			const hasMorphPosition = geometry.morphAttributes.position !== undefined;
 			const hasMorphNormals = geometry.morphAttributes.normal !== undefined;
@@ -109,7 +109,8 @@ function WebGLMorphtargets( gl, capabilities, textures ) {
 			entry = {
 				count: morphTargetsCount,
 				texture: texture,
-				size: new Vector2( width, height )
+				size: new Vector2( width, height ),
+				dispose: disposeTexture
 			};
 
 			morphTextures.set( geometry, entry );

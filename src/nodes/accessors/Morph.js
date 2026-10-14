@@ -64,7 +64,7 @@ function getEntry( geometry ) {
 
 	if ( entry === undefined || entry.count !== morphTargetsCount ) {
 
-		if ( entry !== undefined ) entry.texture.dispose();
+		if ( entry !== undefined ) entry.dispose();
 
 		const morphTargets = geometry.morphAttributes.position || [];
 		const morphNormals = geometry.morphAttributes.normal || [];
@@ -151,7 +151,8 @@ function getEntry( geometry ) {
 			count: morphTargetsCount,
 			texture: bufferTexture,
 			stride: vertexDataCount,
-			size: new Vector2( width, height )
+			size: new Vector2( width, height ),
+			dispose: disposeTexture
 		};
 
 		_morphTextures.set( geometry, entry );

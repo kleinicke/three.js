@@ -188,19 +188,21 @@ class WebGPUAttributeUtils {
 
 				if ( bufferAttribute.isStorageBufferAttribute || bufferAttribute.isStorageInstancedBufferAttribute ) {
 
-					// update the storage attribute so storage bindings access the padded layout
+					// pad storage attributes in place, so storage bindings and later updates use the padded layout
 
 					bufferAttribute.itemSize = paddedItemSize;
 					bufferAttribute.array = paddedArray;
 
+				} else {
+
+					// save the original and padded item size so buffer updates can apply the same padding
+
+					bufferData._itemSize = itemSize;
+					bufferData._paddedItemSize = paddedItemSize;
+
 				}
 
 				array = paddedArray;
-
-				// save the original and padded item size so buffer updates can apply the same padding
-
-				bufferData._itemSize = itemSize;
-				bufferData._paddedItemSize = paddedItemSize;
 
 			}
 
@@ -255,14 +257,6 @@ class WebGPUAttributeUtils {
 			for ( let i = 0; i < bufferAttribute.count; i ++ ) {
 
 				array.set( bufferAttribute.array.subarray( i * itemSize, i * itemSize + itemSize ), i * paddedItemSize );
-
-			}
-
-			if ( bufferAttribute.isStorageBufferAttribute || bufferAttribute.isStorageInstancedBufferAttribute ) {
-
-				// keep the storage attribute in sync with the padded layout
-
-				bufferAttribute.array = array;
 
 			}
 
